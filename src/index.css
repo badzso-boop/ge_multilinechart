@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+.line-path.inactive {
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+}
+
+.line-path.active {
+  opacity: 1;
+  stroke-width: 3;
+}
+
+.label-rect.inactive {
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+}
+
+.label-text.inactive {
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+}
+
+
+.marker-div {
+  font-size: 20px;
+  pointer-events: none;
+}
+
+svg {
+  overflow: visible;
+}

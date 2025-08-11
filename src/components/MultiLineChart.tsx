@@ -1,46 +1,55 @@
 import * as d3 from "d3"
 import React, { useRef, useEffect } from "react"
 
+// Képek importálása marker ikonokhoz
 import Covid from "../images/covid.png"
 import Valsag from "../images/valsag.png"
 
+// Egyetlen adatpont típusa
 interface LineDataPoint {
-  x: number
-  y: number
+  x: number // X koordináta (pl. év, hónap index)
+  y: number // Y érték (pl. pénz, darabszám)
 }
 
+// Egy teljes vonal adatsor típusa
 interface LineSeries {
-  id: string
-  values: LineDataPoint[]
-  color: string
+  id: string           // vonal neve (pl. "Family A")
+  values: LineDataPoint[] // a vonalhoz tartozó pontok
+  color: string        // a vonal színe
 }
 
 const MultiLineChart: React.FC = () => {
+  // React ref, hogy az SVG DOM elemhez hozzáférjünk
   const ref = useRef<SVGSVGElement | null>(null)
 
+  // A D3 rajzolás csak a komponens betöltése után fusson le
   useEffect(() => {
+    // 1️⃣ Margók és rajzterület beállítása
     const margin = { top: 60, right: 30, bottom: 30, left: 50 }
     const width = 800 - margin.left - margin.right
     const height = 400 - margin.top - margin.bottom
 
+    // 2️⃣ SVG elem kiválasztása és méretezése
     const svg = d3.select(ref.current)
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
 
+    // Minden korábbi tartalom törlése (újrarenderelésnél fontos)
     svg.selectAll("*").remove()
 
+    // 3️⃣ Rajzterület csoport létrehozása, margókkal eltolva
     const g = svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`)
 
-    // 3 vonal adat
+    // 4️⃣ Adatok generálása (3 különböző "család" vonal)
     const data: LineSeries[] = [
       {
         id: "Family A",
         color: "steelblue",
         values: d3.range(30).map((x) => {
-          let y = 100 + x * 8 + Math.random() * 10 // alapnövekedés
-          if (x >= 10) y -= 30                     // válság hatás
-          if (x >= 20) y -= 20                     // covid hatás
+          let y = 100 + x * 8 + Math.random() * 10 // alap növekedés
+          if (x >= 10) y -= 30  // válság hatás
+          if (x >= 20) y -= 20  // covid hatás
           return { x, y }
         }),
       },
@@ -66,17 +75,17 @@ const MultiLineChart: React.FC = () => {
       },
     ]
 
-    // Skálák
+    // 5️⃣ Skálák létrehozása
     const x = d3.scaleLinear()
-      .domain([0, 29])
+      .domain([0, 29]) // 0-tól 29-ig
       .range([0, width])
 
     const y = d3.scaleLinear()
-      .domain([0, d3.max(data.flatMap(d => d.values.map(v => v.y))) || 1])
+      .domain([0, d3.max(data.flatMap(d => d.values.map(v => v.y))) || 1]) // max y érték
       .nice()
       .range([height, 0])
 
-    // Tengelyek
+    // 6️⃣ Tengelyek rajzolása
     g.append("g")
       .attr("transform", `translate(0,${height})`)
       .call(d3.axisBottom(x))
@@ -84,35 +93,35 @@ const MultiLineChart: React.FC = () => {
     g.append("g")
       .call(d3.axisLeft(y))
 
-    // Vonal generátor
+    // 7️⃣ Vonal generátor (pontokat összekötő függvény)
     const line = d3.line<LineDataPoint>()
       .x(d => x(d.x))
       .y(d => y(d.y))
 
-    // Vonalak renderelése
+    // 8️⃣ Vonalcsoportok létrehozása + hover események
     const lines = g.selectAll(".line-group, .label-rect, .label-text, .data-point")
       .data(data)
       .enter()
       .append("g")
       .attr("class", "line-group")
       .on("mouseenter", function (_, d) {
-        // minden vonal és label elhalványul
+        // Minden vonal elhalványítása
         d3.selectAll(".line-path, .label-rect, .label-text")
           .classed("inactive", true)
           .classed("active", false)
 
-        // az adott vonal és label kiemelése
+        // Aktuális vonal és címke kiemelése
         d3.select(this).select(".line-path, .label-rect, .label-text")
           .classed("inactive", false)
           .classed("active", true)
 
-        // adatpontok megjelenése
+        // Adatpontok megjelenítése
         d3.select(this).selectAll(".data-point")
           .transition()
           .duration(200)
           .style("opacity", 1)
 
-        // a hozzá tartozó label-ek kijelölése id alapján
+        // Kapcsolódó címkék kiemelése
         d3.selectAll(`.label-rect.label-${d.id.replace(/\s+/g, '-')}`)
           .classed("inactive", false)
           .classed("active", true)
@@ -122,6 +131,7 @@ const MultiLineChart: React.FC = () => {
           .classed("active", true)
       })
       .on("mouseleave", function () {
+        // Minden visszaáll alapállapotba
         d3.selectAll(".line-path, .label-rect, .label-text")
           .classed("inactive", false)
           .classed("active", false)
@@ -132,15 +142,15 @@ const MultiLineChart: React.FC = () => {
           .style("opacity", 0)
       })
 
-    // Láthatatlan, de vastagabb "hover buffer" path
+    // 9️⃣ Láthatatlan hover terület a könnyebb egérkezeléshez
     lines.append("path")
       .attr("class", "line-hover-area")
       .attr("fill", "none")
       .attr("stroke", "transparent")
-      .attr("stroke-width", 15) // ez a "buffer tér"
+      .attr("stroke-width", 15)
       .attr("d", d => line(d.values) ?? "")
 
-    // Látható vonal
+    // 🔟 Látható vonal kirajzolása
     lines.append("path")
       .attr("class", "line-path")
       .attr("fill", "none")
@@ -148,6 +158,7 @@ const MultiLineChart: React.FC = () => {
       .attr("stroke-width", 4)
       .attr("d", d => line(d.values) ?? "")
 
+    // 1️⃣1️⃣ Adatpontok kirajzolása + tooltip események
     lines.selectAll(".data-point")
       .data(d => d.values.map(v => ({ ...v, color: d.color, parentId: d.id })))
       .enter()
@@ -177,10 +188,8 @@ const MultiLineChart: React.FC = () => {
           .style("opacity", 0)
       })
 
-
-
+    // 1️⃣2️⃣ Szöveg színének automatikus választása háttér alapján
     function getContrastColor(hexColor: string): string {
-      // Egyszerű kontraszt számítás: ha világos a háttér → fekete szöveg, ha sötét → fehér szöveg
       hexColor = hexColor.replace("#", "")
       const r = parseInt(hexColor.substring(0, 2), 16)
       const g = parseInt(hexColor.substring(2, 4), 16)
@@ -189,14 +198,14 @@ const MultiLineChart: React.FC = () => {
       return luminance > 186 ? "black" : "white"
     }
 
-    // label-ek rajzolása
+    // 1️⃣3️⃣ Címkék rajzolása a vonalak végére
     data.forEach((line) => {
       const lastPoint = line.values[line.values.length - 1]
       const labelText = line.id
       const fillColor = line.color
       const textColor = getContrastColor(fillColor)
 
-      // Ideiglenes text elem a méret méréséhez (láthatatlanul)
+      // Ideiglenes text elem a szélesség méréséhez
       const tempText = g.append("text")
         .attr("font-size", "12px")
         .attr("font-weight", "bold")
@@ -211,16 +220,16 @@ const MultiLineChart: React.FC = () => {
         .attr("class", `label-rect label-${line.id.replace(/\s+/g, '-')}`)
         .attr("x", x(lastPoint.x))
         .attr("y", y(lastPoint.y) - bbox.height / 2)
-        .attr("width", bbox.width + 10)  // kis padding
+        .attr("width", bbox.width + 10)
         .attr("height", bbox.height)
         .attr("fill", fillColor)
-        .attr("rx", 3) // lekerekített sarkok
+        .attr("rx", 3)
         .attr("ry", 3)
 
-      // Szöveg a téglalap tetején
+      // Szöveg a téglalapon
       g.append("text")
         .attr("class", `label-text label-${line.id.replace(/\s+/g, '-')}`)
-        .attr("x", x(lastPoint.x) + 5)  // paddingbalra 5, így középre kerül a text
+        .attr("x", x(lastPoint.x) + 5)
         .attr("y", y(lastPoint.y))
         .attr("fill", textColor)
         .attr("font-size", "12px")
@@ -228,11 +237,11 @@ const MultiLineChart: React.FC = () => {
         .attr("alignment-baseline", "middle")
         .text(labelText)
 
-      // Ideiglenes eltávolítása
+      // Ideiglenes text eltávolítása
       tempText.remove()
     })
 
-    // Marker vonalak és custom div hely
+    // 1️⃣4️⃣ Marker események (pl. válság, Covid)
     const markers = [
       { xVal: 10, label: "Financial crisis", img: Valsag },
       { xVal: 20, label: "Covid", img: Covid },
@@ -241,7 +250,7 @@ const MultiLineChart: React.FC = () => {
     markers.forEach(({ xVal, label, img }) => {
       const markerX = x(xVal)
 
-      // Vonal
+      // Függőleges szaggatott vonal
       g.append("line")
         .attr("x1", markerX)
         .attr("x2", markerX)
@@ -250,10 +259,10 @@ const MultiLineChart: React.FC = () => {
         .attr("stroke", "gray")
         .attr("stroke-dasharray", "4 4")
 
-      // Egyedi HTML elem foreignObject-en belül
+      // Kép és szöveg HTML-ként, foreignObject segítségével
       const fo = svg.append("foreignObject")
         .attr("x", markerX + margin.left - 40)
-        .attr("y", - 20) // kicsit a grafikon fölé helyezve
+        .attr("y", - 20)
         .attr("width", 80)
         .attr("height", 80)
 
@@ -268,10 +277,9 @@ const MultiLineChart: React.FC = () => {
 
       div.append("img")
         .attr("src", img)
-        .attr("margin-top", "50px")
         .attr("width", 40)
         .attr("height", 40)
-        .style("border-radius", "50%") // ha kör alakú kell
+        .style("border-radius", "50%")
 
       div.append("span")
         .style("font-size", "12px")
@@ -279,7 +287,7 @@ const MultiLineChart: React.FC = () => {
         .text(label)
     })
 
-    //tooltip div
+    // 1️⃣5️⃣ Tooltip div létrehozása (HTML, nem SVG)
     const tooltip = d3.select("body")
       .append("div")
       .attr("class", "tooltip")
@@ -292,8 +300,9 @@ const MultiLineChart: React.FC = () => {
       .style("font-size", "12px")
       .style("opacity", 0)
 
-  }, [])
+  }, []) // useEffect csak egyszer fusson
 
+  // Visszatérés: üres SVG, amit a D3 tölt fel
   return <svg ref={ref}></svg>
 }
 

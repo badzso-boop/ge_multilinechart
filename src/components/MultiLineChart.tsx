@@ -47,7 +47,7 @@ const MultiLineChart: React.FC = () => {
         id: "Family A",
         color: "steelblue",
         values: d3.range(30).map((x) => {
-          let y = 100 + x * 8 + Math.random() * 10 // alap növekedés
+          let y = 100 + x * 20 + Math.random() * 30 // alap növekedés
           if (x >= 10) y -= 30  // válság hatás
           if (x >= 20) y -= 20  // covid hatás
           return { x, y }
@@ -57,7 +57,7 @@ const MultiLineChart: React.FC = () => {
         id: "Family B",
         color: "tomato",
         values: d3.range(30).map((x) => {
-          let y = 80 + x * 5 + Math.random() * 15
+          let y = 80 + x * 10 + Math.random() * 10
           if (x >= 10) y -= 15
           if (x >= 20) y -= 40 // covid jobban érinti
           return { x, y }
@@ -67,7 +67,7 @@ const MultiLineChart: React.FC = () => {
         id: "Family C",
         color: "green",
         values: d3.range(30).map((x) => {
-          let y = 60 + x * 4 + Math.random() * 8
+          let y = 10 + x * 5 + Math.random() * 5
           if (x >= 10) y -= 20
           if (x >= 20) y -= 10
           return { x, y }
@@ -80,23 +80,35 @@ const MultiLineChart: React.FC = () => {
       .domain([0, 29]) // 0-tól 29-ig
       .range([0, width])
 
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(data.flatMap(d => d.values.map(v => v.y))) || 1]) // max y érték
-      .nice()
-      .range([height, 0])
-
     // 6️⃣ Tengelyek rajzolása
     g.append("g")
       .attr("transform", `translate(0,${height})`)
       .call(d3.axisBottom(x))
 
-    g.append("g")
-      .call(d3.axisLeft(y))
+    // Több y skála létrehozása
+    const yScales = data.map((series, i) => {
+      const yScale = d3.scaleLinear()
+        .domain([0, d3.max(series.values.map(v => v.y)) || 1])
+        .nice()
+        .range([height, 0])
+      return yScale
+    })
+
+    // Y tengelyek csoportja
+    const yAxisGroups = data.map((series, i) => {
+      return svg.append("g")
+        .attr("class", `y-axis y-axis-${series.id.replace(/\s+/g, '-')}`)
+        .attr("transform", `translate(${margin.left},${margin.top})`)
+        .style("opacity", 0)
+        .call(d3.axisLeft(yScales[i]))
+    })
 
     // 7️⃣ Vonal generátor (pontokat összekötő függvény)
-    const line = d3.line<LineDataPoint>()
-      .x(d => x(d.x))
-      .y(d => y(d.y))
+    const lineGenerators = data.map((series, i) => {
+      return d3.line<LineDataPoint>()
+        .x(d => x(d.x))
+        .y(d => yScales[i](d.y))
+    })
 
     // 8️⃣ Vonalcsoportok létrehozása + hover események
     const lines = g.selectAll(".line-group, .label-rect, .label-text, .data-point")
@@ -129,6 +141,11 @@ const MultiLineChart: React.FC = () => {
         d3.selectAll(`.label-text.label-${d.id.replace(/\s+/g, '-')}`)
           .classed("inactive", false)
           .classed("active", true)
+
+        d3.selectAll(`.y-axis.y-axis-${d.id.replace(/\s+/g, '-')}`)
+          .transition()
+          .duration(200)
+          .style("opacity", 1)
       })
       .on("mouseleave", function () {
         // Minden visszaáll alapállapotba
@@ -140,6 +157,12 @@ const MultiLineChart: React.FC = () => {
           .transition()
           .duration(200)
           .style("opacity", 0)
+
+        // Tengely elrejtése
+        d3.selectAll(".y-axis")
+          .transition()
+          .duration(200)
+          .style("opacity", 0)
       })
 
     // 9️⃣ Láthatatlan hover terület a könnyebb egérkezeléshez
@@ -148,7 +171,7 @@ const MultiLineChart: React.FC = () => {
       .attr("fill", "none")
       .attr("stroke", "transparent")
       .attr("stroke-width", 15)
-      .attr("d", d => line(d.values) ?? "")
+      .attr("d", (d,i) => lineGenerators[i](d.values) ?? "")
 
     // 🔟 Látható vonal kirajzolása
     lines.append("path")
@@ -156,16 +179,16 @@ const MultiLineChart: React.FC = () => {
       .attr("fill", "none")
       .attr("stroke", d => d.color)
       .attr("stroke-width", 4)
-      .attr("d", d => line(d.values) ?? "")
+      .attr("d", (d,i) => lineGenerators[i](d.values) ?? "")
 
     // 1️⃣1️⃣ Adatpontok kirajzolása + tooltip események
     lines.selectAll(".data-point")
-      .data(d => d.values.map(v => ({ ...v, color: d.color, parentId: d.id })))
+      .data((d, i) => d.values.map(v => ({ ...v, color: d.color, parentId: d.id, lineIndex: i })))
       .enter()
       .append("circle")
       .attr("class", d => `data-point point-${d.parentId.replace(/\s+/g, '-')}`)
       .attr("cx", d => x(d.x))
-      .attr("cy", d => y(d.y))
+      .attr("cy", d => yScales[d.lineIndex](d.y))
       .attr("r", 4)
       .attr("fill", d => d.color)
       .style("opacity", 0)
@@ -199,14 +222,15 @@ const MultiLineChart: React.FC = () => {
     }
 
     // 1️⃣3️⃣ Címkék rajzolása a vonalak végére
-    data.forEach((line) => {
+    lines.each(function (line, i) {
+      const group = d3.select(this)
       const lastPoint = line.values[line.values.length - 1]
       const labelText = line.id
       const fillColor = line.color
       const textColor = getContrastColor(fillColor)
 
       // Ideiglenes text elem a szélesség méréséhez
-      const tempText = g.append("text")
+      const tempText = group.append("text")
         .attr("font-size", "12px")
         .attr("font-weight", "bold")
         .text(labelText)
@@ -216,28 +240,27 @@ const MultiLineChart: React.FC = () => {
       if (!bbox) return
 
       // Háttér téglalap
-      g.append("rect")
+      group.append("rect")
         .attr("class", `label-rect label-${line.id.replace(/\s+/g, '-')}`)
         .attr("x", x(lastPoint.x))
-        .attr("y", y(lastPoint.y) - bbox.height / 2)
+        .attr("y", yScales[i](lastPoint.y) - bbox.height / 2)
         .attr("width", bbox.width + 10)
         .attr("height", bbox.height)
         .attr("fill", fillColor)
         .attr("rx", 3)
         .attr("ry", 3)
 
-      // Szöveg a téglalapon
-      g.append("text")
+      // Szöveg
+      group.append("text")
         .attr("class", `label-text label-${line.id.replace(/\s+/g, '-')}`)
         .attr("x", x(lastPoint.x) + 5)
-        .attr("y", y(lastPoint.y))
+        .attr("y", yScales[i](lastPoint.y))
         .attr("fill", textColor)
         .attr("font-size", "12px")
         .attr("font-weight", "bold")
         .attr("alignment-baseline", "middle")
         .text(labelText)
 
-      // Ideiglenes text eltávolítása
       tempText.remove()
     })
 

@@ -222,6 +222,9 @@ const MultiLineChart: React.FC = () => {
     }
 
     // 1️⃣3️⃣ Címkék rajzolása a vonalak végére
+    const labelSpacing = 25 // px távolság a címkék között
+    const labelStartX = width + 20 // címke kezdő X pozíció
+
     lines.each(function (line, i) {
       const group = d3.select(this)
       const lastPoint = line.values[line.values.length - 1]
@@ -239,11 +242,24 @@ const MultiLineChart: React.FC = () => {
       const bbox = tempText.node()?.getBBox()
       if (!bbox) return
 
+      const labelY = i * labelSpacing
+
+
+      // Összekötő vonal a grafikon utolsó pontjától a címkéig
+      g.append("line")
+        .attr("x1", x(lastPoint.x))
+        .attr("y1", yScales[i](lastPoint.y))
+        .attr("x2", labelStartX)
+        .attr("y2", labelY)
+        .attr("stroke", fillColor)
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "3 3")
+
       // Háttér téglalap
       group.append("rect")
         .attr("class", `label-rect label-${line.id.replace(/\s+/g, '-')}`)
-        .attr("x", x(lastPoint.x))
-        .attr("y", yScales[i](lastPoint.y) - bbox.height / 2)
+        .attr("x", labelStartX)
+        .attr("y", labelY - bbox.height / 2)
         .attr("width", bbox.width + 10)
         .attr("height", bbox.height)
         .attr("fill", fillColor)
@@ -253,8 +269,8 @@ const MultiLineChart: React.FC = () => {
       // Szöveg
       group.append("text")
         .attr("class", `label-text label-${line.id.replace(/\s+/g, '-')}`)
-        .attr("x", x(lastPoint.x) + 5)
-        .attr("y", yScales[i](lastPoint.y))
+        .attr("x", labelStartX + 5)
+        .attr("y", labelY)
         .attr("fill", textColor)
         .attr("font-size", "12px")
         .attr("font-weight", "bold")

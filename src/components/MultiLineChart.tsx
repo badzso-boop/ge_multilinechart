@@ -118,7 +118,7 @@ const MultiLineChart: React.FC = () => {
       .attr("class", "line-group")
       .on("mouseenter", function (_, d) {
         // Minden vonal elhalványítása
-        d3.selectAll(".line-path, .label-rect, .label-text")
+        d3.selectAll(".line-path, .label-rect, .label-text, .label-line")
           .classed("inactive", true)
           .classed("active", false)
 
@@ -139,6 +139,10 @@ const MultiLineChart: React.FC = () => {
           .classed("active", true)
 
         d3.selectAll(`.label-text.label-${d.id.replace(/\s+/g, '-')}`)
+          .classed("inactive", false)
+          .classed("active", true)
+
+        d3.selectAll(`.label-line.line-${d.id.replace(/\s+/g, '-')}`)
           .classed("inactive", false)
           .classed("active", true)
 
@@ -247,6 +251,7 @@ const MultiLineChart: React.FC = () => {
 
       // Összekötő vonal a grafikon utolsó pontjától a címkéig
       g.append("line")
+        .attr("class", `label-line line-${line.id.replace(/\s+/g, '-')}`)
         .attr("x1", x(lastPoint.x))
         .attr("y1", yScales[i](lastPoint.y))
         .attr("x2", labelStartX)

@@ -10,6 +10,11 @@
   stroke-width: 3;
 }
 
+.label-line.inactive {
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
+}
+
 .label-rect.inactive {
   opacity: 0.1;
   transition: opacity 0.3s ease;

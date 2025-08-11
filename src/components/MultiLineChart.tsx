@@ -385,15 +385,20 @@ const MultiLineChart: React.FC = () => {
   // Visszatérés: üres SVG, amit a D3 tölt fel
   return (
     <div>
-      <Slider
-        value={dateRange}
-        min={dateToTimestamp(startDate)}
-        max={dateToTimestamp(endDate)}
-        onChange={handleChange}
-        valueLabelDisplay="auto"
-        valueLabelFormat={timestampToDateString}
-        step={24 * 3600 * 1000} // 1 nap lépésköz
-      />
+
+      <div className="mx-12 mb-5">
+        <Slider
+          value={dateRange}
+          min={dateToTimestamp(startDate)}
+          max={dateToTimestamp(endDate)}
+          onChange={handleChange}
+          valueLabelDisplay="auto"
+          valueLabelFormat={timestampToDateString}
+          step={24 * 3600 * 1000} // 1 nap lépésköz
+        />
+      </div>
+
+
       <svg ref={ref}></svg>
     </div>
   )

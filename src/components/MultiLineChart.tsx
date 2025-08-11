@@ -1,4 +1,5 @@
 import * as d3 from "d3"
+import Slider from '@mui/material/Slider';
 import React, { useRef, useEffect } from "react"
 
 // Képek importálása marker ikonokhoz
@@ -22,6 +23,28 @@ const MultiLineChart: React.FC = () => {
   // React ref, hogy az SVG DOM elemhez hozzáférjünk
   const ref = useRef<SVGSVGElement | null>(null)
 
+  function dateToTimestamp(date: Date) {
+    return date.getTime();
+  }
+
+  function timestampToDateString(timestamp: number) {
+    const d = new Date(timestamp);
+    return d.toISOString().slice(0, 10); // YYYY-MM-DD formátum
+  }
+
+  const startDate = new Date(2020, 0, 1);
+  const endDate = new Date(2020, 0, 29);
+  const [dateRange, setDateRange] = React.useState<[number, number]>([
+    dateToTimestamp(startDate),
+    dateToTimestamp(endDate),
+  ])
+
+  const handleChange = (event: Event, newValue: number | number[]) => {
+    if (Array.isArray(newValue)) {
+      setDateRange(newValue as [number, number]);
+    }
+  };
+
   // A D3 rajzolás csak a komponens betöltése után fusson le
   useEffect(() => {
     // 1️⃣ Margók és rajzterület beállítása
@@ -40,44 +63,55 @@ const MultiLineChart: React.FC = () => {
     // 3️⃣ Rajzterület csoport létrehozása, margókkal eltolva
     const g = svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`)
-
+    
     // 4️⃣ Adatok generálása (3 különböző "család" vonal)
     const data: LineSeries[] = [
       {
         id: "Family A",
         color: "steelblue",
-        values: d3.range(30).map((x) => {
-          let y = 100 + x * 20 + Math.random() * 30 // alap növekedés
-          if (x >= 10) y -= 30  // válság hatás
-          if (x >= 20) y -= 20  // covid hatás
-          return { x, y }
+        values: d3.range(30).map((i) => {
+          const date = new Date(startDate)
+          date.setDate(startDate.getDate() + i)
+          let y = 100 + i * 20 + Math.random() * 30
+          if (i >= 10) y -= 30
+          if (i >= 20) y -= 20
+          return { x: date.getTime(), y }
         }),
       },
       {
         id: "Family B",
         color: "tomato",
         values: d3.range(30).map((x) => {
+          const date = new Date(startDate)
+          date.setDate(startDate.getDate() + x)
           let y = 80 + x * 10 + Math.random() * 10
           if (x >= 10) y -= 15
-          if (x >= 20) y -= 40 // covid jobban érinti
-          return { x, y }
+          if (x >= 20) y -= 40
+          return { x: date.getTime(), y }
         }),
       },
       {
         id: "Family C",
         color: "green",
         values: d3.range(30).map((x) => {
+          const date = new Date(startDate)
+          date.setDate(startDate.getDate() + x)
           let y = 10 + x * 5 + Math.random() * 5
           if (x >= 10) y -= 20
           if (x >= 20) y -= 10
-          return { x, y }
+          return { x: date.getTime(), y }
         }),
       },
     ]
 
+    const filteredData = data.map(series => ({
+      ...series,
+      values: series.values.filter(v => v.x >= dateRange[0] && v.x <= dateRange[1])
+    }))
+
     // 5️⃣ Skálák létrehozása
-    const x = d3.scaleLinear()
-      .domain([0, 29]) // 0-tól 29-ig
+    const x = d3.scaleTime()
+      .domain([new Date(dateRange[0]), new Date(dateRange[1])])
       .range([0, width])
 
     // 6️⃣ Tengelyek rajzolása
@@ -86,7 +120,7 @@ const MultiLineChart: React.FC = () => {
       .call(d3.axisBottom(x))
 
     // Több y skála létrehozása
-    const yScales = data.map((series, i) => {
+    const yScales = filteredData.map((series, i) => {
       const yScale = d3.scaleLinear()
         .domain([0, d3.max(series.values.map(v => v.y)) || 1])
         .nice()
@@ -95,7 +129,7 @@ const MultiLineChart: React.FC = () => {
     })
 
     // Y tengelyek csoportja
-    const yAxisGroups = data.map((series, i) => {
+    const yAxisGroups = filteredData.map((series, i) => {
       return svg.append("g")
         .attr("class", `y-axis y-axis-${series.id.replace(/\s+/g, '-')}`)
         .attr("transform", `translate(${margin.left},${margin.top})`)
@@ -104,7 +138,7 @@ const MultiLineChart: React.FC = () => {
     })
 
     // 7️⃣ Vonal generátor (pontokat összekötő függvény)
-    const lineGenerators = data.map((series, i) => {
+    const lineGenerators = filteredData.map((series, i) => {
       return d3.line<LineDataPoint>()
         .x(d => x(d.x))
         .y(d => yScales[i](d.y))
@@ -112,7 +146,7 @@ const MultiLineChart: React.FC = () => {
 
     // 8️⃣ Vonalcsoportok létrehozása + hover események
     const lines = g.selectAll(".line-group, .label-rect, .label-text, .data-point")
-      .data(data)
+      .data(filteredData)
       .enter()
       .append("g")
       .attr("class", "line-group")
@@ -201,7 +235,7 @@ const MultiLineChart: React.FC = () => {
           .style("opacity", 1)
           .html(`
             <strong>${d.parentId}</strong><br/>
-            Év: ${d.x}<br/>
+            Év: ${new Date(d.x).toISOString().slice(0, 10).replace(/-/g, '.')}<br/>
             Érték: ${d.y.toFixed(1)}
           `)
       })
@@ -287,11 +321,13 @@ const MultiLineChart: React.FC = () => {
 
     // 1️⃣4️⃣ Marker események (pl. válság, Covid)
     const markers = [
-      { xVal: 10, label: "Financial crisis", img: Valsag },
-      { xVal: 20, label: "Covid", img: Covid },
+      { xVal: new Date(2020, 0, 11), label: "Financial crisis", img: Valsag },
+      { xVal: new Date(2020, 0, 21), label: "Covid", img: Covid },
     ]
 
     markers.forEach(({ xVal, label, img }) => {
+      if (xVal.getTime() < dateRange[0] || xVal.getTime() > dateRange[1]) return // ne rajzold ki ha kívül van a tartományon
+
       const markerX = x(xVal)
 
       // Függőleges szaggatott vonal
@@ -344,10 +380,23 @@ const MultiLineChart: React.FC = () => {
       .style("font-size", "12px")
       .style("opacity", 0)
 
-  }, []) // useEffect csak egyszer fusson
+  }, [dateRange]) // useEffect csak egyszer fusson
 
   // Visszatérés: üres SVG, amit a D3 tölt fel
-  return <svg ref={ref}></svg>
+  return (
+    <div>
+      <Slider
+        value={dateRange}
+        min={dateToTimestamp(startDate)}
+        max={dateToTimestamp(endDate)}
+        onChange={handleChange}
+        valueLabelDisplay="auto"
+        valueLabelFormat={timestampToDateString}
+        step={24 * 3600 * 1000} // 1 nap lépésköz
+      />
+      <svg ref={ref}></svg>
+    </div>
+  )
 }
 
 export default MultiLineChart

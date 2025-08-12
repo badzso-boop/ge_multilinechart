@@ -4,23 +4,11 @@ import './App.css'
 
 function App() {
   return (
-    <div className='flex'>
+    <div className='w-full h-screen bg-gray-400 flex items-center justify-center'>
 
-      <div className="w-[56px] bg-blue-400 h-screen">
-        side
-      </div>
-
-      <div className='w-full bg-red-300'>
-        <div className='w-full h-[130px] bg-green-400'>
-          header
-        </div>
-
-        <div className='border bg-red-300'>
-          MultiLineChart
-
+        <div>
           <MultiLineChart />
         </div>
-      </div>
 
     </div>
   )

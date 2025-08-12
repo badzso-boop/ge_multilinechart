@@ -1,6 +1,7 @@
 import * as d3 from "d3"
 import Slider from '@mui/material/Slider';
-import React, { useRef, useEffect } from "react"
+import TrendsModal from "./TrendsModal";
+import React, { useRef, useEffect, useState } from "react"
 
 // Képek importálása marker ikonokhoz
 import Covid from "../images/covid.png"
@@ -32,12 +33,72 @@ const MultiLineChart: React.FC = () => {
     return d.toISOString().slice(0, 10); // YYYY-MM-DD formátum
   }
 
+  function Last6Month() {
+    setRangeVIsible(false);
+
+    const today = new Date();
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(today.getMonth() - 6);
+
+    setDateRange([
+      dateToTimestamp(sixMonthsAgo),
+      dateToTimestamp(today),
+    ]);
+  }
+
   const startDate = new Date(2020, 0, 1);
   const endDate = new Date(2020, 0, 29);
   const [dateRange, setDateRange] = React.useState<[number, number]>([
     dateToTimestamp(startDate),
     dateToTimestamp(endDate),
   ])
+  
+  // 4️⃣ Adatok generálása (3 különböző "család" vonal)
+  const data: LineSeries[] = [
+    {
+      id: "Family A",
+      color: "steelblue",
+      values: d3.range(30).map((i) => {
+        const date = new Date(startDate)
+        date.setDate(startDate.getDate() + i)
+        let y = 100 + i * 20 + Math.random() * 30
+        if (i >= 10) y -= 30
+        if (i >= 20) y -= 20
+        return { x: date.getTime(), y }
+      }),
+    },
+    {
+      id: "Family B",
+      color: "tomato",
+      values: d3.range(30).map((x) => {
+        const date = new Date(startDate)
+        date.setDate(startDate.getDate() + x)
+        let y = 80 + x * 10 + Math.random() * 10
+        if (x >= 10) y -= 15
+        if (x >= 20) y -= 40
+        return { x: date.getTime(), y }
+      }),
+    },
+    {
+      id: "Family C",
+      color: "green",
+      values: d3.range(30).map((x) => {
+        const date = new Date(startDate)
+        date.setDate(startDate.getDate() + x)
+        let y = 10 + x * 5 + Math.random() * 5
+        if (x >= 10) y -= 20
+        if (x >= 20) y -= 10
+        return { x: date.getTime(), y }
+      }),
+    },
+  ]
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>(data.map((d) => d.id));
+
+  const filteredModalData = data.filter((series) =>
+    selectedIds.includes(series.id)
+  );
 
   const handleChange = (event: Event, newValue: number | number[]) => {
     if (Array.isArray(newValue)) {
@@ -45,8 +106,11 @@ const MultiLineChart: React.FC = () => {
     }
   };
 
+  const [rangeVisible, setRangeVIsible] = useState(true);
+
   // A D3 rajzolás csak a komponens betöltése után fusson le
   useEffect(() => {
+
     // 1️⃣ Margók és rajzterület beállítása
     const margin = { top: 60, right: 30, bottom: 30, left: 50 }
     const width = 800 - margin.left - margin.right
@@ -63,48 +127,8 @@ const MultiLineChart: React.FC = () => {
     // 3️⃣ Rajzterület csoport létrehozása, margókkal eltolva
     const g = svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`)
-    
-    // 4️⃣ Adatok generálása (3 különböző "család" vonal)
-    const data: LineSeries[] = [
-      {
-        id: "Family A",
-        color: "steelblue",
-        values: d3.range(30).map((i) => {
-          const date = new Date(startDate)
-          date.setDate(startDate.getDate() + i)
-          let y = 100 + i * 20 + Math.random() * 30
-          if (i >= 10) y -= 30
-          if (i >= 20) y -= 20
-          return { x: date.getTime(), y }
-        }),
-      },
-      {
-        id: "Family B",
-        color: "tomato",
-        values: d3.range(30).map((x) => {
-          const date = new Date(startDate)
-          date.setDate(startDate.getDate() + x)
-          let y = 80 + x * 10 + Math.random() * 10
-          if (x >= 10) y -= 15
-          if (x >= 20) y -= 40
-          return { x: date.getTime(), y }
-        }),
-      },
-      {
-        id: "Family C",
-        color: "green",
-        values: d3.range(30).map((x) => {
-          const date = new Date(startDate)
-          date.setDate(startDate.getDate() + x)
-          let y = 10 + x * 5 + Math.random() * 5
-          if (x >= 10) y -= 20
-          if (x >= 20) y -= 10
-          return { x: date.getTime(), y }
-        }),
-      },
-    ]
 
-    const filteredData = data.map(series => ({
+    const filteredData = filteredModalData.map(series => ({
       ...series,
       values: series.values.filter(v => v.x >= dateRange[0] && v.x <= dateRange[1])
     }))
@@ -264,6 +288,8 @@ const MultiLineChart: React.FC = () => {
     const labelStartX = width + 20 // címke kezdő X pozíció
 
     lines.each(function (line, i) {
+      if (!line.values.length) return;
+
       const group = d3.select(this)
       const lastPoint = line.values[line.values.length - 1]
       const labelText = line.id
@@ -380,26 +406,55 @@ const MultiLineChart: React.FC = () => {
       .style("font-size", "12px")
       .style("opacity", 0)
 
-  }, [dateRange]) // useEffect csak egyszer fusson
+  }, [dateRange, filteredModalData]) // useEffect csak egyszer fusson
 
   // Visszatérés: üres SVG, amit a D3 tölt fel
   return (
     <div>
+      <TrendsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        data={data}
+        selectedIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+      />
 
-      <div className="mx-12 mb-5">
-        <Slider
-          value={dateRange}
-          min={dateToTimestamp(startDate)}
-          max={dateToTimestamp(endDate)}
-          onChange={handleChange}
-          valueLabelDisplay="auto"
-          valueLabelFormat={timestampToDateString}
-          step={24 * 3600 * 1000} // 1 nap lépésköz
-        />
+      <div className="flex flex-wrap justify-between">
+        <div>
+          <button className="py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200" onClick={() => setIsModalOpen(true)}>
+            Trends
+          </button>
+        </div>
+
+        <div>
+          <button className={`py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 ${rangeVisible ? "" : "active-btn"}`} onClick={() => Last6Month()}>
+            Last 6 month
+          </button>
+          <button className={`py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 ${rangeVisible ? "active-btn" : ""}`} onClick={() => setRangeVIsible(true)}>
+            Date range
+          </button>
+        </div>
       </div>
 
 
-      <svg ref={ref}></svg>
+      {
+        rangeVisible && (
+          <div className="mx-12 mb-5 mt-5">
+            <Slider
+              value={dateRange}
+              min={dateToTimestamp(startDate)}
+              max={dateToTimestamp(endDate)}
+              onChange={handleChange}
+              valueLabelDisplay="auto"
+              valueLabelFormat={timestampToDateString}
+              step={24 * 3600 * 1000} // 1 nap lépésköz
+            />
+          </div>
+        )
+      }
+
+
+      <svg className="mt-12" ref={ref}></svg>
     </div>
   )
 }

@@ -25,6 +25,15 @@
   transition: opacity 0.3s ease;
 }
 
+.active-btn {
+  background-color: #ada6c4;
+}
+
+.custom-opacity {
+  opacity: 75% !important;
+  background-color: black;
+}
+
 
 .marker-div {
   font-size: 20px;

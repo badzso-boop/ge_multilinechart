@@ -52,12 +52,28 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
 
 
       {/* Modal tartalom */}
-      <div className="relative bg-white rounded-2xl shadow-lg w-[80%] max-w-3xl p-8 z-[101]">
+      <div className="relative bg-white rounded-2xl shadow-lg w-[500px] max-w-3xl p-4 z-[101]">
         
 
-        <h2 className="text-2xl font-bold mb-4">Válaszd ki a sorokat</h2>
+        <div className="w-full flex flex-wrap my-2 justify-between">
+          <div className="pl-[10px] pr-[60px] italic bg-[#ececf0]">
+            Search trends
+          </div>
 
-        <div className="space-y-3">
+          <div className="text-[#7252bc] cursor-pointer" onClick={() => {setLocalSelection([]);onSelectionChange([]);}}>
+            Reset to default
+          </div>
+
+          {/* Bezárás gomb */}
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-800 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="space-y-3 my-2">
           {data.map((series) => (
             <label
               key={series.id}
@@ -67,26 +83,15 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
                 type="checkbox"
                 checked={localSelection.includes(series.id)}
                 onChange={() => toggleId(series.id)}
-                className="h-4 w-4"
+                className="h-4 w-4 bg-[#d7d8db]"
               />
-              <span
-                className="font-medium"
-                style={{ color: series.color }}
-              >
+              <span>
                 {series.id}
               </span>
             </label>
           ))}
         </div>
 
-
-        {/* Bezárás gomb */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-800"
-        >
-          ✕
-        </button>
       </div>
     </div>
   );

@@ -18,6 +18,7 @@ interface LineSeries {
   id: string           // vonal neve (pl. "Family A")
   values: LineDataPoint[] // a vonalhoz tartozó pontok
   color: string        // a vonal színe
+  currency: string
 }
 
 const MultiLineChart: React.FC = () => {
@@ -46,51 +47,99 @@ const MultiLineChart: React.FC = () => {
     ]);
   }
 
-  const startDate = new Date(2020, 0, 1);
-  const endDate = new Date(2020, 0, 29);
+  const startDate = new Date(2020, 0, 1) // 2005 január
+  const endDate = new Date(2025, 8, 31) // 2023 december
   const [dateRange, setDateRange] = React.useState<[number, number]>([
     dateToTimestamp(startDate),
     dateToTimestamp(endDate),
   ])
+
+  function generateFinancialData(
+    id: string,
+    color: string,
+    base: number,
+    volatility: number,
+    currency: string,
+    crashRules: (date: Date, y: number) => number
+  ): LineSeries {
+    const values: LineDataPoint[] = []
+    const date = new Date(startDate)
+
+    while (date <= endDate) {
+      // néha 2 hónap kimarad
+      if (Math.random() > 0.2) {
+        const d = new Date(date)
+        d.setDate(15) // hónap közepére tesszük az adatot, jól látható
+        let y = base + Math.random() * volatility
+        y += (d.getFullYear() - 2018) * (Math.random() * 5) // kis növekedési trend
+
+        // krízisek hatása
+        y = crashRules(d, y)
+
+        values.push({ x: d.getTime(), y })
+      } else {
+        // ha kimaradás, akkor ugrunk előre +2 hónapot
+        date.setMonth(date.getMonth() + 2)
+        continue
+      }
+
+      // következő hónap
+      date.setMonth(date.getMonth() + 1)
+    }
+
+    return { id, color, values, currency}
+  }
   
   // 4️⃣ Adatok generálása (3 különböző "család" vonal)
   const data: LineSeries[] = [
-    {
-      id: "Family A",
-      color: "steelblue",
-      values: d3.range(30).map((i) => {
-        const date = new Date(startDate)
-        date.setDate(startDate.getDate() + i)
-        let y = 100 + i * 20 + Math.random() * 30
-        if (i >= 10) y -= 30
-        if (i >= 20) y -= 20
-        return { x: date.getTime(), y }
-      }),
-    },
-    {
-      id: "Family B",
-      color: "tomato",
-      values: d3.range(30).map((x) => {
-        const date = new Date(startDate)
-        date.setDate(startDate.getDate() + x)
-        let y = 80 + x * 10 + Math.random() * 10
-        if (x >= 10) y -= 15
-        if (x >= 20) y -= 40
-        return { x: date.getTime(), y }
-      }),
-    },
-    {
-      id: "Family C",
-      color: "green",
-      values: d3.range(30).map((x) => {
-        const date = new Date(startDate)
-        date.setDate(startDate.getDate() + x)
-        let y = 10 + x * 5 + Math.random() * 5
-        if (x >= 10) y -= 20
-        if (x >= 20) y -= 10
-        return { x: date.getTime(), y }
-      }),
-    },
+    generateFinancialData(
+      "Family A",
+      "steelblue",
+      100,
+      20,
+      "HUF",
+      (date, y) => {
+        if (date.getFullYear() === 2024) {
+          y -= 50 + Math.random() * 20 // nagy bukás
+        }
+        if (date.getFullYear() === 2021) {
+          y += 40 + Math.random() * 15 // COVID alatt nyer
+        }
+        return y
+      }
+    ),
+    generateFinancialData(
+      "Family B",
+      "tomato",
+      80,
+      15,
+      "EUR",
+      (date, y) => {
+        if (date.getFullYear() === 2024) {
+          y += 30 + Math.random() * 15 // jól jön ki a 2024 válságból
+        }
+        if (date.getFullYear() === 2021) {
+          y -= 35 + Math.random() * 10 // COVID alatt bukik
+        }
+        return y
+      }
+    ),
+    generateFinancialData(
+      "Family C",
+      "green",
+      60,
+      10,
+      "USD",
+      (date, y) => {
+        if (date.getFullYear() === 2024) {
+          y -= 15 + Math.random() * 10 // közepesen érinti
+        }
+        if (date.getFullYear() === 2021) {
+          y -= 10 + Math.random() * 5 // enyhén csökken
+        }
+        return y
+      }
+    ),
   ]
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -245,7 +294,7 @@ const MultiLineChart: React.FC = () => {
 
     // 1️⃣1️⃣ Adatpontok kirajzolása + tooltip események
     lines.selectAll(".data-point")
-      .data((d, i) => d.values.map(v => ({ ...v, color: d.color, parentId: d.id, lineIndex: i })))
+      .data((d, i) => d.values.map(v => ({ ...v, color: d.color, parentId: d.id, lineIndex: i, currency: d.currency })))
       .enter()
       .append("circle")
       .attr("class", d => `data-point point-${d.parentId.replace(/\s+/g, '-')}`)
@@ -259,8 +308,8 @@ const MultiLineChart: React.FC = () => {
           .style("opacity", 1)
           .html(`
             <strong>${d.parentId}</strong><br/>
-            Év: ${new Date(d.x).toISOString().slice(0, 10).replace(/-/g, '.')}<br/>
-            Érték: ${d.y.toFixed(1)}
+            Date: ${new Date(d.x).toISOString().slice(0, 10).replace(/-/g, '.')}<br/>
+            Value: ${d.y.toFixed(1)} ${d.currency}
           `)
       })
       .on("mousemove", function (event) {
@@ -347,8 +396,8 @@ const MultiLineChart: React.FC = () => {
 
     // 1️⃣4️⃣ Marker események (pl. válság, Covid)
     const markers = [
-      { xVal: new Date(2020, 0, 11), label: "Financial crisis", img: Valsag },
-      { xVal: new Date(2020, 0, 21), label: "Covid", img: Covid },
+      { xVal: new Date(2024, 4, 11), label: "Financial crisis", img: Valsag },
+      { xVal: new Date(2021, 2, 21), label: "Covid", img: Covid },
     ]
 
     markers.forEach(({ xVal, label, img }) => {

@@ -47,103 +47,106 @@ const MultiLineChart: React.FC = () => {
     ]);
   }
 
-  const startDate = new Date(2020, 0, 1) // 2005 január
+  const startDate = new Date(2005, 0, 1) // 2005 január
   const endDate = new Date(2025, 8, 31) // 2023 december
   const [dateRange, setDateRange] = React.useState<[number, number]>([
     dateToTimestamp(startDate),
     dateToTimestamp(endDate),
   ])
 
-  function generateFinancialData(
+  // 🔥 Új adatgenerátor: évente max 2 pont (jan, júl)
+  function generateYearlyData(
     id: string,
     color: string,
     base: number,
     volatility: number,
     currency: string,
-    crashRules: (date: Date, y: number) => number
+    socialClass: "lower" | "middle" | "high"
   ): LineSeries {
-    const values: LineDataPoint[] = []
-    const date = new Date(startDate)
+    const values: LineDataPoint[] = [];
+    const date = new Date(2005, 0, 1);
 
     while (date <= endDate) {
-      // néha 2 hónap kimarad
-      if (Math.random() > 0.2) {
-        const d = new Date(date)
-        d.setDate(15) // hónap közepére tesszük az adatot, jól látható
-        let y = base + Math.random() * volatility
-        y += (d.getFullYear() - 2018) * (Math.random() * 5) // kis növekedési trend
+      // Január
+      if (Math.random() > 0.3) {
+        let y = base + Math.random() * volatility;
 
-        // krízisek hatása
-        y = crashRules(d, y)
+        // trend növekedés
+        y += (date.getFullYear() - 2005) * (Math.random() * 2);
 
-        values.push({ x: d.getTime(), y })
-      } else {
-        // ha kimaradás, akkor ugrunk előre +2 hónapot
-        date.setMonth(date.getMonth() + 2)
-        continue
+        // 🔥 válság hatások
+        if (date.getFullYear() === 2008 || date.getFullYear() === 2009) {
+          if (socialClass === "lower") y -= 40 + Math.random() * 15;
+          if (socialClass === "middle") y -= 20 + Math.random() * 10;
+          if (socialClass === "high") y -= 5 + Math.random() * 5;
+        }
+
+        if (date.getFullYear() === 2021) {
+          if (socialClass === "lower") y -= 10 + Math.random() * 5;
+          if (socialClass === "middle") {
+            // vegyes: fele pozitív, fele negatív
+            y += Math.random() > 0.5 ? 15 + Math.random() * 5 : -15 - Math.random() * 5;
+          }
+          if (socialClass === "high") y += 20 + Math.random() * 10;
+        }
+
+        values.push({ x: new Date(date).getTime(), y });
       }
 
-      // következő hónap
-      date.setMonth(date.getMonth() + 1)
+      // Július
+      if (Math.random() > 0.3) {
+        const d = new Date(date);
+        d.setMonth(6);
+        let y = base + Math.random() * volatility;
+        y += (d.getFullYear() - 2005) * (Math.random() * 2);
+
+        if (d.getFullYear() === 2008 || d.getFullYear() === 2009) {
+          if (socialClass === "lower") y -= 40 + Math.random() * 15;
+          if (socialClass === "middle") y -= 20 + Math.random() * 10;
+          if (socialClass === "high") y -= 5 + Math.random() * 5;
+        }
+
+        if (d.getFullYear() === 2021) {
+          if (socialClass === "lower") y -= 10 + Math.random() * 5;
+          if (socialClass === "middle") {
+            y += Math.random() > 0.5 ? 15 + Math.random() * 5 : -15 - Math.random() * 5;
+          }
+          if (socialClass === "high") y += 20 + Math.random() * 10;
+        }
+
+        values.push({ x: d.getTime(), y });
+      }
+
+      // következő év
+      date.setFullYear(date.getFullYear() + 1);
     }
 
-    return { id, color, values, currency}
+    return { id, color, values, currency };
   }
-  
-  // 4️⃣ Adatok generálása (3 különböző "család" vonal)
-  const data: LineSeries[] = [
-    generateFinancialData(
-      "Family A",
-      "steelblue",
-      100,
-      20,
-      "HUF",
-      (date, y) => {
-        if (date.getFullYear() === 2024) {
-          y -= 50 + Math.random() * 20 // nagy bukás
-        }
-        if (date.getFullYear() === 2021) {
-          y += 40 + Math.random() * 15 // COVID alatt nyer
-        }
-        return y
-      }
-    ),
-    generateFinancialData(
-      "Family B",
-      "tomato",
-      80,
-      15,
-      "EUR",
-      (date, y) => {
-        if (date.getFullYear() === 2024) {
-          y += 30 + Math.random() * 15 // jól jön ki a 2024 válságból
-        }
-        if (date.getFullYear() === 2021) {
-          y -= 35 + Math.random() * 10 // COVID alatt bukik
-        }
-        return y
-      }
-    ),
-    generateFinancialData(
-      "Family C",
-      "green",
-      60,
-      10,
-      "USD",
-      (date, y) => {
-        if (date.getFullYear() === 2024) {
-          y -= 15 + Math.random() * 10 // közepesen érinti
-        }
-        if (date.getFullYear() === 2021) {
-          y -= 10 + Math.random() * 5 // enyhén csökken
-        }
-        return y
-      }
-    ),
-  ]
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>(data.map((d) => d.id));
+  // 🎨 Családok definiálása
+  const families: { id: string; color: string; base: number; vol: number; currency: string; socialClass: "lower" | "middle" | "high" }[] = [
+    { id: "Smith", color: "steelblue", base: 50, vol: 15, currency: "USD", socialClass: "lower" },
+    { id: "Dower", color: "tomato", base: 55, vol: 15, currency: "USD", socialClass: "lower" },
+    { id: "Wilson", color: "purple", base: 60, vol: 20, currency: "USD", socialClass: "lower" },
+    { id: "Evans", color: "brown", base: 65, vol: 18, currency: "USD", socialClass: "lower" },
+
+    { id: "Blackwood", color: "green", base: 100, vol: 25, currency: "EUR", socialClass: "middle" },
+    { id: "Miller", color: "orange", base: 110, vol: 20, currency: "EUR", socialClass: "middle" },
+    { id: "Johnson", color: "teal", base: 120, vol: 22, currency: "EUR", socialClass: "middle" },
+
+    { id: "Anderson", color: "gold", base: 200, vol: 30, currency: "GBP", socialClass: "high" },
+    { id: "Williams", color: "pink", base: 220, vol: 28, currency: "GBP", socialClass: "high" },
+    { id: "Brown", color: "black", base: 250, vol: 35, currency: "GBP", socialClass: "high" },
+  ];
+
+  const data: LineSeries[] = families.map(f =>
+    generateYearlyData(f.id, f.color, f.base, f.vol, f.currency, f.socialClass)
+  );
+
+  // 🔥 Kezdetben csak 1-1 család látszik minden classból
+  const [selectedIds, setSelectedIds] = useState<string[]>(["Smith", "Blackwood", "Anderson"]);
+  const [isModalOpen, setIsModalOpen] = useState(true);
 
   const filteredModalData = data.filter((series) =>
     selectedIds.includes(series.id)
@@ -396,7 +399,7 @@ const MultiLineChart: React.FC = () => {
 
     // 1️⃣4️⃣ Marker események (pl. válság, Covid)
     const markers = [
-      { xVal: new Date(2024, 4, 11), label: "Financial crisis", img: Valsag },
+      { xVal: new Date(2008, 9, 11), label: "Financial crisis", img: Valsag },
       { xVal: new Date(2021, 2, 21), label: "Covid", img: Covid },
     ]
 
@@ -470,8 +473,11 @@ const MultiLineChart: React.FC = () => {
 
       <div className="flex flex-wrap justify-between">
         <div>
-          <button className="py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200" onClick={() => setIsModalOpen(true)}>
-            Trends
+          <button className="py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 flex flex-wrap items-center" onClick={() => setIsModalOpen(true)}>
+            Trends 
+            <span className="ml-2 h-5 w-5 rounded-full bg-purple-400 text-white text-sm flex items-center justify-center">
+              {selectedIds.length}
+            </span>
           </button>
         </div>
 

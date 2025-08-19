@@ -19,6 +19,8 @@ interface TrendsModalProps {
   onSelectionChange: (ids: string[]) => void;
 }
 
+const DEFAULT_SELECTION = ["Smith", "Blackwood", "Anderson"];
+
 const TrendsModal: React.FC<TrendsModalProps> = ({
   isOpen,
   onClose,
@@ -35,10 +37,19 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
     if (localSelection.includes(id)) {
       updated = localSelection.filter((item) => item !== id);
     } else {
+      if (localSelection.length >= 5) {
+        alert("Egyszerre legfeljebb 5 család választható ki.");
+        return;
+      }
       updated = [...localSelection, id];
     }
-    setLocalSelection(updated);
-    onSelectionChange(updated);
+      setLocalSelection(updated);
+      onSelectionChange(updated);
+  };
+
+  const resetToDefault = () => {
+    setLocalSelection(DEFAULT_SELECTION);
+    onSelectionChange(DEFAULT_SELECTION);
   };
 
   return (
@@ -60,7 +71,10 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
             Search trends
           </div>
 
-          <div className="text-[#7252bc] cursor-pointer" onClick={() => {setLocalSelection([]);onSelectionChange([]);}}>
+          <div
+            className="text-[#7252bc] cursor-pointer"
+            onClick={resetToDefault}
+          >
             Reset to default
           </div>
 
@@ -71,6 +85,18 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
           >
             ✕
           </button>
+        </div>
+
+        <div className="flex flex-wrap items-center">
+          <div className="mx-2">
+            .
+          </div>
+          <div className="mx-2">
+            i
+          </div>
+          <div className="mx-2">
+            For best view, select no more than 5 trends. 
+          </div>
         </div>
 
         <div className="space-y-3 my-2">

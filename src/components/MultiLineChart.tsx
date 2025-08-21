@@ -21,6 +21,8 @@ interface LineSeries {
   currency: string
 }
 
+type SocialClass = "lower" | "middle" | "high";
+
 const MultiLineChart: React.FC = () => {
   // React ref, hogy az SVG DOM elemhez hozzáférjünk
   const ref = useRef<SVGSVGElement | null>(null)
@@ -47,6 +49,15 @@ const MultiLineChart: React.FC = () => {
     ]);
   }
 
+  function formatDateUS(date: Date) {
+    const d = new Date(date)
+    const day = String(d.getDate()).padStart(2, '0');
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    const month = monthNames[d.getMonth()];
+    const year = d.getFullYear();
+    return `${month} ${day}, ${year}`
+  }
+
   const startDate = new Date(2005, 0, 1) // 2005 január
   const endDate = new Date(2025, 8, 31) // 2023 december
   const [dateRange, setDateRange] = React.useState<[number, number]>([
@@ -61,83 +72,104 @@ const MultiLineChart: React.FC = () => {
     base: number,
     volatility: number,
     currency: string,
-    socialClass: "lower" | "middle" | "high"
+    socialClass: SocialClass
   ): LineSeries {
     const values: LineDataPoint[] = [];
     const date = new Date(2005, 0, 1);
+    const endDate = new Date(2025, 0, 1);
 
     while (date <= endDate) {
-      // Január
+      // Január adat
       if (Math.random() > 0.3) {
-        let y = base + Math.random() * volatility;
+        let y = base + (Math.random() - 0.5) * volatility;
 
-        // trend növekedés
-        y += (date.getFullYear() - 2005) * (Math.random() * 2);
+        // 📈 trend – évi reális növekedés
+        if (socialClass === "lower") y += (date.getFullYear() - 2005) * (50 + Math.random() * 30);
+        if (socialClass === "middle") y += (date.getFullYear() - 2005) * (150 + Math.random() * 50);
+        if (socialClass === "high") y += (date.getFullYear() - 2005) * (400 + Math.random() * 100);
 
-        // 🔥 válság hatások
+        // 🔥 2008-2009 válság hatás (arányosan)
         if (date.getFullYear() === 2008 || date.getFullYear() === 2009) {
-          if (socialClass === "lower") y -= 40 + Math.random() * 15;
-          if (socialClass === "middle") y -= 20 + Math.random() * 10;
-          if (socialClass === "high") y -= 5 + Math.random() * 5;
+          if (socialClass === "lower") y *= 0.7 + Math.random() * 0.1;   // -30%
+          if (socialClass === "middle") y *= 0.85 + Math.random() * 0.1; // -15%
+          if (socialClass === "high") y *= 0.95 + Math.random() * 0.05;  // -5%
         }
 
+        // 😷 2021 COVID hatás
         if (date.getFullYear() === 2021) {
-          if (socialClass === "lower") y -= 10 + Math.random() * 5;
+          if (socialClass === "lower") y *= 0.9 + Math.random() * 0.05;   // -5..-10%
           if (socialClass === "middle") {
-            // vegyes: fele pozitív, fele negatív
-            y += Math.random() > 0.5 ? 15 + Math.random() * 5 : -15 - Math.random() * 5;
+            // fele mínusz, fele plusz
+            if (Math.random() > 0.5) {
+              y *= 0.9 + Math.random() * 0.05;  // -5..-10%
+            } else {
+              y *= 1.1 + Math.random() * 0.05;  // +10..+15%
+            }
           }
-          if (socialClass === "high") y += 20 + Math.random() * 10;
+          if (socialClass === "high") y *= 1.15 + Math.random() * 0.1; // +15..+25%
         }
 
         values.push({ x: new Date(date).getTime(), y });
       }
 
-      // Július
+      // Július adat
       if (Math.random() > 0.3) {
         const d = new Date(date);
         d.setMonth(6);
-        let y = base + Math.random() * volatility;
-        y += (d.getFullYear() - 2005) * (Math.random() * 2);
 
+        let y = base + (Math.random() - 0.5) * volatility;
+
+        // 📈 trend
+        if (socialClass === "lower") y += (d.getFullYear() - 2005) * (50 + Math.random() * 30);
+        if (socialClass === "middle") y += (d.getFullYear() - 2005) * (150 + Math.random() * 50);
+        if (socialClass === "high") y += (d.getFullYear() - 2005) * (400 + Math.random() * 100);
+
+        // 🔥 válság
         if (d.getFullYear() === 2008 || d.getFullYear() === 2009) {
-          if (socialClass === "lower") y -= 40 + Math.random() * 15;
-          if (socialClass === "middle") y -= 20 + Math.random() * 10;
-          if (socialClass === "high") y -= 5 + Math.random() * 5;
+          if (socialClass === "lower") y *= 0.7 + Math.random() * 0.1;
+          if (socialClass === "middle") y *= 0.85 + Math.random() * 0.1;
+          if (socialClass === "high") y *= 0.95 + Math.random() * 0.05;
         }
 
+        // 😷 COVID
         if (d.getFullYear() === 2021) {
-          if (socialClass === "lower") y -= 10 + Math.random() * 5;
+          if (socialClass === "lower") y *= 0.9 + Math.random() * 0.05;
           if (socialClass === "middle") {
-            y += Math.random() > 0.5 ? 15 + Math.random() * 5 : -15 - Math.random() * 5;
+            if (Math.random() > 0.5) {
+              y *= 0.9 + Math.random() * 0.05;
+            } else {
+              y *= 1.1 + Math.random() * 0.05;
+            }
           }
-          if (socialClass === "high") y += 20 + Math.random() * 10;
+          if (socialClass === "high") y *= 1.15 + Math.random() * 0.1;
         }
 
         values.push({ x: d.getTime(), y });
       }
 
-      // következő év
+      // Következő év
       date.setFullYear(date.getFullYear() + 1);
     }
 
     return { id, color, values, currency };
   }
 
+
+  const colors = d3.schemeCategory10;
   // 🎨 Családok definiálása
-  const families: { id: string; color: string; base: number; vol: number; currency: string; socialClass: "lower" | "middle" | "high" }[] = [
-    { id: "Smith", color: "steelblue", base: 50, vol: 15, currency: "USD", socialClass: "lower" },
-    { id: "Dower", color: "tomato", base: 55, vol: 15, currency: "USD", socialClass: "lower" },
-    { id: "Wilson", color: "purple", base: 60, vol: 20, currency: "USD", socialClass: "lower" },
-    { id: "Evans", color: "brown", base: 65, vol: 18, currency: "USD", socialClass: "lower" },
+  const families = [
+    { id: "Smith", color: colors[0], base: 1200, vol: 300, currency: "USD", socialClass: "lower" },
+    { id: "Dower", color: colors[1], base: 1500, vol: 350, currency: "USD", socialClass: "lower" },
+    { id: "Wilson", color: colors[2], base: 1800, vol: 400, currency: "USD", socialClass: "lower" },
+    { id: "Evans", color: colors[3], base: 2000, vol: 450, currency: "USD", socialClass: "lower" },
 
-    { id: "Blackwood", color: "green", base: 100, vol: 25, currency: "EUR", socialClass: "middle" },
-    { id: "Miller", color: "orange", base: 110, vol: 20, currency: "EUR", socialClass: "middle" },
-    { id: "Johnson", color: "teal", base: 120, vol: 22, currency: "EUR", socialClass: "middle" },
+    { id: "Blackwood", color: colors[4], base: 4000, vol: 1000, currency: "EUR", socialClass: "middle" },
+    { id: "Miller", color: colors[5], base: 5000, vol: 1200, currency: "EUR", socialClass: "middle" },
+    { id: "Johnson", color: colors[6], base: 6000, vol: 1500, currency: "EUR", socialClass: "middle" },
 
-    { id: "Anderson", color: "gold", base: 200, vol: 30, currency: "GBP", socialClass: "high" },
-    { id: "Williams", color: "pink", base: 220, vol: 28, currency: "GBP", socialClass: "high" },
-    { id: "Brown", color: "black", base: 250, vol: 35, currency: "GBP", socialClass: "high" },
+    { id: "Anderson", color: colors[7], base: 10000, vol: 2500, currency: "GBP", socialClass: "high" },
+    { id: "Williams", color: colors[8], base: 12000, vol: 2800, currency: "GBP", socialClass: "high" },
+    { id: "Brown", color: colors[9], base: 15000, vol: 3000, currency: "GBP", socialClass: "high" },
   ];
 
   const data: LineSeries[] = families.map(f =>
@@ -146,7 +178,7 @@ const MultiLineChart: React.FC = () => {
 
   // 🔥 Kezdetben csak 1-1 család látszik minden classból
   const [selectedIds, setSelectedIds] = useState<string[]>(["Smith", "Blackwood", "Anderson"]);
-  const [isModalOpen, setIsModalOpen] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredModalData = data.filter((series) =>
     selectedIds.includes(series.id)
@@ -193,7 +225,10 @@ const MultiLineChart: React.FC = () => {
     // 6️⃣ Tengelyek rajzolása
     g.append("g")
       .attr("transform", `translate(0,${height})`)
-      .call(d3.axisBottom(x))
+      .call(d3.axisBottom(x).ticks(6))
+      .selectAll("text")
+      .style("font-size", "14px")
+      .style("font-family", "sans-serif");
 
     // Több y skála létrehozása
     const yScales = filteredData.map((series, i) => {
@@ -206,11 +241,28 @@ const MultiLineChart: React.FC = () => {
 
     // Y tengelyek csoportja
     const yAxisGroups = filteredData.map((series, i) => {
-      return svg.append("g")
+      const group = svg.append("g")
         .attr("class", `y-axis y-axis-${series.id.replace(/\s+/g, '-')}`)
         .attr("transform", `translate(${margin.left},${margin.top})`)
         .style("opacity", 0)
-        .call(d3.axisLeft(yScales[i]))
+        .call(d3.axisLeft(yScales[i]).ticks(6))
+
+      group.selectAll("text")
+        .style("font-size", "14px")
+        .style("font-family", "sans-serif");
+
+      // ➕ Ide tesszük a mértékegység szöveget
+      group.append("text")
+        .attr("class", `y-axis-currency currency-${series.id.replace(/\s+/g, '-')}`)
+        .attr("x", 5)              // egy kicsit jobbra a tengelytől
+        .attr("y", -10)            // a tengely fölött
+        .attr("fill", "black")
+        .attr("font-size", "12px")
+        .attr("font-weight", "bold")
+        .style("opacity", 0)
+        .text(series.currency)
+
+      return group
     })
 
     // 7️⃣ Vonal generátor (pontokat összekötő függvény)
@@ -260,6 +312,12 @@ const MultiLineChart: React.FC = () => {
           .transition()
           .duration(200)
           .style("opacity", 1)
+
+        d3.selectAll(`.currency-${d.id.replace(/\s+/g, '-')}`)
+          .transition()
+          .duration(200)
+          .style("opacity", 1)
+
       })
       .on("mouseleave", function () {
         // Minden visszaáll alapállapotba
@@ -274,6 +332,11 @@ const MultiLineChart: React.FC = () => {
 
         // Tengely elrejtése
         d3.selectAll(".y-axis")
+          .transition()
+          .duration(200)
+          .style("opacity", 0)
+
+        d3.selectAll(".y-axis-currency")
           .transition()
           .duration(200)
           .style("opacity", 0)
@@ -310,9 +373,12 @@ const MultiLineChart: React.FC = () => {
         tooltip
           .style("opacity", 1)
           .html(`
-            <strong>${d.parentId}</strong><br/>
-            Date: ${new Date(d.x).toISOString().slice(0, 10).replace(/-/g, '.')}<br/>
-            Value: ${d.y.toFixed(1)} ${d.currency}
+            <div>
+              <span>
+              ${d.y.toFixed(1)} ${d.currency}
+              </span><br />
+              ${formatDateUS(new Date(d.x))}
+            </div>
           `)
       })
       .on("mousemove", function (event) {
@@ -336,7 +402,7 @@ const MultiLineChart: React.FC = () => {
     }
 
     // 1️⃣3️⃣ Címkék rajzolása a vonalak végére
-    const labelSpacing = 25 // px távolság a címkék között
+    const labelSpacing = 30 // px távolság a címkék között
     const labelStartX = width + 20 // címke kezdő X pozíció
 
     lines.each(function (line, i) {
@@ -350,7 +416,7 @@ const MultiLineChart: React.FC = () => {
 
       // Ideiglenes text elem a szélesség méréséhez
       const tempText = group.append("text")
-        .attr("font-size", "12px")
+        .attr("font-size", "15px")
         .attr("font-weight", "bold")
         .text(labelText)
         .attr("visibility", "hidden")
@@ -376,9 +442,9 @@ const MultiLineChart: React.FC = () => {
       group.append("rect")
         .attr("class", `label-rect label-${line.id.replace(/\s+/g, '-')}`)
         .attr("x", labelStartX)
-        .attr("y", labelY - bbox.height / 2)
-        .attr("width", bbox.width + 10)
-        .attr("height", bbox.height)
+        .attr("y", labelY - (bbox.height+5) / 2)
+        .attr("width", bbox.width + 15)
+        .attr("height", bbox.height + 5)
         .attr("fill", fillColor)
         .attr("rx", 3)
         .attr("ry", 3)
@@ -389,7 +455,7 @@ const MultiLineChart: React.FC = () => {
         .attr("x", labelStartX + 5)
         .attr("y", labelY)
         .attr("fill", textColor)
-        .attr("font-size", "12px")
+        .attr("font-size", "14px")
         .attr("font-weight", "bold")
         .attr("alignment-baseline", "middle")
         .text(labelText)
@@ -475,7 +541,7 @@ const MultiLineChart: React.FC = () => {
         <div>
           <button className="py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 flex flex-wrap items-center" onClick={() => setIsModalOpen(true)}>
             Trends 
-            <span className="ml-2 h-5 w-5 rounded-full bg-purple-400 text-white text-sm flex items-center justify-center">
+            <span className="ml-2 h-5 w-5 rounded-full bg-[#7252BC] text-white text-sm flex items-center justify-center">
               {selectedIds.length}
             </span>
           </button>
@@ -503,6 +569,9 @@ const MultiLineChart: React.FC = () => {
               valueLabelDisplay="auto"
               valueLabelFormat={timestampToDateString}
               step={24 * 3600 * 1000} // 1 nap lépésköz
+              sx={{
+                color: '#7252BC'
+              }}
             />
           </div>
         )

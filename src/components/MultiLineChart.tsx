@@ -170,7 +170,7 @@ const MultiLineChart: React.FC = () => {
     { id: "Anderson", color: colors[7], base: 10000, vol: 2500, currency: "GBP", socialClass: "high" },
     { id: "Williams", color: colors[8], base: 12000, vol: 2800, currency: "GBP", socialClass: "high" },
     { id: "Brown", color: colors[9], base: 15000, vol: 3000, currency: "GBP", socialClass: "high" },
-  ];
+  ] as const;
 
   const data: LineSeries[] = families.map(f =>
     generateYearlyData(f.id, f.color, f.base, f.vol, f.currency, f.socialClass)

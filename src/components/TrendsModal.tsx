@@ -6,9 +6,10 @@ interface LineValue {
 }
 
 interface LineSeries {
-  id: string;
-  color: string;
-  values: LineValue[];
+  id: string           // vonal neve (pl. "Family A")
+  values: LineValue[] // a vonalhoz tartozó pontok
+  color: string        // a vonal színe
+  currency: string
 }
 
 interface TrendsModalProps {
@@ -112,7 +113,7 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
                 className="h-4 w-4 bg-[#d7d8db]"
               />
               <span>
-                {series.id}
+                {series.id} - {series.currency} - {series.socialClass}
               </span>
             </label>
           ))}

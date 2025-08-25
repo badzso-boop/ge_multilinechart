@@ -13,12 +13,20 @@ interface LineDataPoint {
   y: number // Y érték (pl. pénz, darabszám)
 }
 
+interface DataPointWithMeta extends LineDataPoint {
+  color: string;
+  parentId: string;
+  lineIndex: number;
+  currency: string;
+}
+
 // Egy teljes vonal adatsor típusa
 export interface LineSeries {
   id: string           // vonal neve (pl. "Family A")
   values: LineDataPoint[] // a vonalhoz tartozó pontok
   color: string        // a vonal színe
   currency: string
+  socialClass: SocialClass
 }
 
 type SocialClass = "lower" | "middle" | "high";
@@ -67,9 +75,9 @@ const MultiLineChart: React.FC = () => {
   const [hoverWidth, setHoverWidth] = useState(15);
   const currencies = ["USD", "EUR", "GBP"] as const;
   const exchangeRates: Record<typeof currencies[number], number> = {
-    USD: 1,      // USD alap
-    EUR: 1.17,    // 1 EUR = 1.1 USD
-    GBP: 1.35,    // 1 GBP = 1.3 USD
+    USD: 1,
+    EUR: 0.86,
+    GBP: 0.74,
   };
 
   // 🔥 Új adatgenerátor: évente max 2 pont (jan, júl)
@@ -136,9 +144,8 @@ const MultiLineChart: React.FC = () => {
       date.setFullYear(date.getFullYear() + 1);
     }
 
-    return { id, color, values, currency };
+    return { id, color, values, currency, socialClass };
   }
-
 
   const colors = d3.schemeCategory10;
   // 🎨 Családok definiálása
@@ -166,6 +173,8 @@ const MultiLineChart: React.FC = () => {
       generateYearlyData(f.id, f.color, f.base, f.vol, f.currency, f.socialClass)
     )
   );
+
+  
 
   // 🔥 Kezdetben csak 1-1 család látszik minden classból
   const [selectedIds, setSelectedIds] = useState<string[]>(["Smith", "Blackwood", "Wilson"]);
@@ -221,14 +230,19 @@ const MultiLineChart: React.FC = () => {
       .style("font-size", "14px")
       .style("font-family", "sans-serif");
 
-    const allValuesInUSD = data.flatMap(series =>
+    // const allYValuesFiltered = filteredData.flatMap(series =>
+    //   series.values.map(v => v.y * exchangeRates[series.currency as typeof currencies[number]])
+    // );
+
+    const allYValuesFiltered = filteredData.flatMap(series =>
       series.values.map(v => v.y * exchangeRates[series.currency as typeof currencies[number]])
     );
 
-    const globalMax = d3.max(allValuesInUSD) || 1;
+    const maxY = d3.max(allYValuesFiltered) || 1;
+    console.log(maxY)
 
     const yScale = d3.scaleLinear()
-      .domain([0, globalMax])
+      .domain([0, maxY])
       .nice()
       .range([height, 0]);
 
@@ -242,7 +256,7 @@ const MultiLineChart: React.FC = () => {
       group.call(
         d3.axisLeft(yScale)
           .ticks(5)
-          .tickFormat(d => (Number(d) / exchangeRates[curr as typeof currencies[number]]).toFixed(0))
+          .tickFormat(d => (Number(d)).toFixed(0))
       );
 
       // Valuta címke külön szövegként, a tengely tetejére
@@ -346,7 +360,7 @@ const MultiLineChart: React.FC = () => {
       .attr("class", "line-path")
       .attr("fill", "none")
       .attr("stroke", d => d.color)
-      .attr("stroke-width", 4)
+      .attr("stroke-width", 2)
       .attr("d", (d,i) => lineGenerators[i](d.values) ?? "")
 
     // 1️⃣1️⃣ Adatpontok kirajzolása + tooltip események
@@ -362,17 +376,14 @@ const MultiLineChart: React.FC = () => {
       .style("opacity", 0)
       .on("mouseover", function (event, d) {
         const yInUSD = d.y * exchangeRates[d.currency as typeof currencies[number]];
-        console.log(d.y)
-        console.log(d.currency)
-        console.log(exchangeRates[d.currency as typeof currencies[number]])
-        console.log(yInUSD)
-
+        // ${d.y.toFixed(1)} USD (~${yInUSD.toFixed(1)} ${d.currency}) <br ˛>
         tooltip
           .style("opacity", 1)
           .html(`
             <div>
               <span>
-               ${d.y.toFixed(1)} USD (~${yInUSD.toFixed(1)} ${d.currency})
+              
+              ${yInUSD.toFixed(1)} ${d.currency}
               </span><br />
               ${formatDateUS(new Date(d.x))}
             </div>
@@ -533,18 +544,6 @@ const MultiLineChart: React.FC = () => {
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
       />
-
-      <div className="mx-12 mb-5 mt-5">
-        <label className="block mb-2 font-semibold">Hover area width: {hoverWidth}px</label>
-        <Slider
-          value={hoverWidth}
-          min={1}
-          max={50}
-          step={1}
-          onChange={(e, val) => setHoverWidth(val as number)}
-          sx={{ color: '#52bc72' }}
-        />
-      </div>
 
       <div className="flex flex-wrap justify-between">
         <div>

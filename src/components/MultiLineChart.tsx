@@ -64,6 +64,13 @@ const MultiLineChart: React.FC = () => {
     dateToTimestamp(startDate),
     dateToTimestamp(endDate),
   ])
+  const [hoverWidth, setHoverWidth] = useState(15);
+  const currencies = ["USD", "EUR", "GBP"] as const;
+  const exchangeRates: Record<typeof currencies[number], number> = {
+    USD: 1,      // USD alap
+    EUR: 1.17,    // 1 EUR = 1.1 USD
+    GBP: 1.35,    // 1 GBP = 1.3 USD
+  };
 
   // 🔥 Új adatgenerátor: évente max 2 pont (jan, júl)
   function generateYearlyData(
@@ -172,8 +179,10 @@ const MultiLineChart: React.FC = () => {
     { id: "Brown", color: colors[9], base: 15000, vol: 3000, currency: "GBP", socialClass: "high" },
   ] as const;
 
-  const data: LineSeries[] = families.map(f =>
-    generateYearlyData(f.id, f.color, f.base, f.vol, f.currency, f.socialClass)
+  const [data] = useState<LineSeries[]>(() =>
+    families.map(f =>
+      generateYearlyData(f.id, f.color, f.base, f.vol, f.currency, f.socialClass)
+    )
   );
 
   // 🔥 Kezdetben csak 1-1 család látszik minden classból
@@ -230,46 +239,46 @@ const MultiLineChart: React.FC = () => {
       .style("font-size", "14px")
       .style("font-family", "sans-serif");
 
-    // Több y skála létrehozása
-    const yScales = filteredData.map((series, i) => {
-      const yScale = d3.scaleLinear()
-        .domain([0, d3.max(series.values.map(v => v.y)) || 1])
-        .nice()
-        .range([height, 0])
-      return yScale
-    })
+    const allValuesInUSD = data.flatMap(series =>
+      series.values.map(v => v.y * exchangeRates[series.currency as typeof currencies[number]])
+    );
 
-    // Y tengelyek csoportja
-    const yAxisGroups = filteredData.map((series, i) => {
+    const globalMax = d3.max(allValuesInUSD) || 1;
+
+    const yScale = d3.scaleLinear()
+      .domain([0, globalMax])
+      .nice()
+      .range([height, 0]);
+
+    currencies.forEach(curr => {
       const group = svg.append("g")
-        .attr("class", `y-axis y-axis-${series.id.replace(/\s+/g, '-')}`)
+        .attr("class", `y-axis y-axis-${curr}`)
         .attr("transform", `translate(${margin.left},${margin.top})`)
-        .style("opacity", 0)
-        .call(d3.axisLeft(yScales[i]).ticks(6))
+        .style("opacity", 0) // ✅ alapból elrejtjük
 
-      group.selectAll("text")
-        .style("font-size", "14px")
-        .style("font-family", "sans-serif");
+      // Tengely számokkal
+      group.call(
+        d3.axisLeft(yScale)
+          .ticks(5)
+          .tickFormat(d => (Number(d) / exchangeRates[curr as typeof currencies[number]]).toFixed(0))
+      );
 
-      // ➕ Ide tesszük a mértékegység szöveget
+      // Valuta címke külön szövegként, a tengely tetejére
       group.append("text")
-        .attr("class", `y-axis-currency currency-${series.id.replace(/\s+/g, '-')}`)
-        .attr("x", 5)              // egy kicsit jobbra a tengelytől
-        .attr("y", -10)            // a tengely fölött
+        .attr("class", `y-axis-currency currency-${curr}`)
+        .attr("x", -10)     // a tengely bal oldalán kívülre
+        .attr("y", -10)     // a tengely tetejére
         .attr("fill", "black")
         .attr("font-size", "12px")
         .attr("font-weight", "bold")
-        .style("opacity", 0)
-        .text(series.currency)
+        .style("opacity", 0) // ✅ alapból elrejtve
+        .text(curr);
+    });
 
-      return group
-    })
-
-    // 7️⃣ Vonal generátor (pontokat összekötő függvény)
     const lineGenerators = filteredData.map((series, i) => {
       return d3.line<LineDataPoint>()
         .x(d => x(d.x))
-        .y(d => yScales[i](d.y))
+        .y(d => yScale(d.y * exchangeRates[series.currency as typeof currencies[number]]))
     })
 
     // 8️⃣ Vonalcsoportok létrehozása + hover események
@@ -308,12 +317,12 @@ const MultiLineChart: React.FC = () => {
           .classed("inactive", false)
           .classed("active", true)
 
-        d3.selectAll(`.y-axis.y-axis-${d.id.replace(/\s+/g, '-')}`)
+        d3.selectAll(`.y-axis.y-axis-${d.currency}`)
           .transition()
           .duration(200)
           .style("opacity", 1)
 
-        d3.selectAll(`.currency-${d.id.replace(/\s+/g, '-')}`)
+        d3.selectAll(`.currency-${d.currency}`)
           .transition()
           .duration(200)
           .style("opacity", 1)
@@ -347,7 +356,7 @@ const MultiLineChart: React.FC = () => {
       .attr("class", "line-hover-area")
       .attr("fill", "none")
       .attr("stroke", "transparent")
-      .attr("stroke-width", 15)
+      .attr("stroke-width", hoverWidth)
       .attr("d", (d,i) => lineGenerators[i](d.values) ?? "")
 
     // 🔟 Látható vonal kirajzolása
@@ -365,7 +374,7 @@ const MultiLineChart: React.FC = () => {
       .append("circle")
       .attr("class", d => `data-point point-${d.parentId.replace(/\s+/g, '-')}`)
       .attr("cx", d => x(d.x))
-      .attr("cy", d => yScales[d.lineIndex](d.y))
+      .attr("cy", d => yScale(d.y * exchangeRates[d.currency as typeof currencies[number]]))
       .attr("r", 4)
       .attr("fill", d => d.color)
       .style("opacity", 0)
@@ -431,7 +440,7 @@ const MultiLineChart: React.FC = () => {
       g.append("line")
         .attr("class", `label-line line-${line.id.replace(/\s+/g, '-')}`)
         .attr("x1", x(lastPoint.x))
-        .attr("y1", yScales[i](lastPoint.y))
+        .attr("y1", yScale(lastPoint.y * exchangeRates[line.currency as typeof currencies[number]]))
         .attr("x2", labelStartX)
         .attr("y2", labelY)
         .attr("stroke", fillColor)
@@ -524,7 +533,7 @@ const MultiLineChart: React.FC = () => {
       .style("font-size", "12px")
       .style("opacity", 0)
 
-  }, [dateRange, filteredModalData]) // useEffect csak egyszer fusson
+  }, [dateRange, filteredModalData, hoverWidth]) // useEffect csak egyszer fusson
 
   // Visszatérés: üres SVG, amit a D3 tölt fel
   return (
@@ -536,6 +545,18 @@ const MultiLineChart: React.FC = () => {
         selectedIds={selectedIds}
         onSelectionChange={setSelectedIds}
       />
+
+      <div className="mx-12 mb-5 mt-5">
+        <label className="block mb-2 font-semibold">Hover area width: {hoverWidth}px</label>
+        <Slider
+          value={hoverWidth}
+          min={1}
+          max={50}
+          step={1}
+          onChange={(e, val) => setHoverWidth(val as number)}
+          sx={{ color: '#52bc72' }}
+        />
+      </div>
 
       <div className="flex flex-wrap justify-between">
         <div>

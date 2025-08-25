@@ -19,7 +19,7 @@ interface TrendsModalProps {
   onSelectionChange: (ids: string[]) => void;
 }
 
-const DEFAULT_SELECTION = ["Smith", "Blackwood", "Anderson"];
+const DEFAULT_SELECTION = ["Smith", "Blackwood", "Wilson"];
 
 const TrendsModal: React.FC<TrendsModalProps> = ({
   isOpen,

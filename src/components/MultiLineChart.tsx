@@ -14,7 +14,7 @@ interface LineDataPoint {
 }
 
 // Egy teljes vonal adatsor típusa
-interface LineSeries {
+export interface LineSeries {
   id: string           // vonal neve (pl. "Family A")
   values: LineDataPoint[] // a vonalhoz tartozó pontok
   color: string        // a vonal színe
@@ -86,75 +86,53 @@ const MultiLineChart: React.FC = () => {
     const endDate = new Date(2025, 0, 1);
 
     while (date <= endDate) {
-      // Január adat
-      if (Math.random() > 0.3) {
-        let y = base + (Math.random() - 0.5) * volatility;
+      // 🔹 segéd függvény a trendhez
+      const getTrend = () => {
+        if (socialClass === "lower") return 20 + Math.random() * 30;
+        if (socialClass === "middle") return 50 + Math.random() * 100;
+        if (socialClass === "high") return 100 + Math.random() * 100;
+        return 0;
+      };
 
-        // 📈 trend – évi reális növekedés
-        if (socialClass === "lower") y += (date.getFullYear() - 2005) * (50 + Math.random() * 30);
-        if (socialClass === "middle") y += (date.getFullYear() - 2005) * (150 + Math.random() * 50);
-        if (socialClass === "high") y += (date.getFullYear() - 2005) * (400 + Math.random() * 100);
+      // Január
+      const jan = new Date(date);
+      let y = base + (Math.random() - 0.5) * (volatility * 0.5) + (jan.getFullYear() - 2005) * getTrend();
 
-        // 🔥 2008-2009 válság hatás (arányosan)
-        if (date.getFullYear() === 2008 || date.getFullYear() === 2009) {
-          if (socialClass === "lower") y *= 0.7 + Math.random() * 0.1;   // -30%
-          if (socialClass === "middle") y *= 0.85 + Math.random() * 0.1; // -15%
-          if (socialClass === "high") y *= 0.95 + Math.random() * 0.05;  // -5%
-        }
-
-        // 😷 2021 COVID hatás
-        if (date.getFullYear() === 2021) {
-          if (socialClass === "lower") y *= 0.9 + Math.random() * 0.05;   // -5..-10%
-          if (socialClass === "middle") {
-            // fele mínusz, fele plusz
-            if (Math.random() > 0.5) {
-              y *= 0.9 + Math.random() * 0.05;  // -5..-10%
-            } else {
-              y *= 1.1 + Math.random() * 0.05;  // +10..+15%
-            }
-          }
-          if (socialClass === "high") y *= 1.15 + Math.random() * 0.1; // +15..+25%
-        }
-
-        values.push({ x: new Date(date).getTime(), y });
+      // Válság 2008-2009
+      if (jan.getFullYear() === 2008 || jan.getFullYear() === 2009) {
+        if (socialClass === "lower") y *= 0.8 + Math.random() * 0.05;
+        if (socialClass === "middle") y *= 0.85 + Math.random() * 0.05;
+        if (socialClass === "high") y *= 0.9 + Math.random() * 0.05;
       }
 
-      // Július adat
-      if (Math.random() > 0.3) {
-        const d = new Date(date);
-        d.setMonth(6);
-
-        let y = base + (Math.random() - 0.5) * volatility;
-
-        // 📈 trend
-        if (socialClass === "lower") y += (d.getFullYear() - 2005) * (50 + Math.random() * 30);
-        if (socialClass === "middle") y += (d.getFullYear() - 2005) * (150 + Math.random() * 50);
-        if (socialClass === "high") y += (d.getFullYear() - 2005) * (400 + Math.random() * 100);
-
-        // 🔥 válság
-        if (d.getFullYear() === 2008 || d.getFullYear() === 2009) {
-          if (socialClass === "lower") y *= 0.7 + Math.random() * 0.1;
-          if (socialClass === "middle") y *= 0.85 + Math.random() * 0.1;
-          if (socialClass === "high") y *= 0.95 + Math.random() * 0.05;
-        }
-
-        // 😷 COVID
-        if (d.getFullYear() === 2021) {
-          if (socialClass === "lower") y *= 0.9 + Math.random() * 0.05;
-          if (socialClass === "middle") {
-            if (Math.random() > 0.5) {
-              y *= 0.9 + Math.random() * 0.05;
-            } else {
-              y *= 1.1 + Math.random() * 0.05;
-            }
-          }
-          if (socialClass === "high") y *= 1.15 + Math.random() * 0.1;
-        }
-
-        values.push({ x: d.getTime(), y });
+      // COVID 2021
+      if (jan.getFullYear() === 2021) {
+        if (socialClass === "lower") y *= 0.95 + Math.random() * 0.05;
+        if (socialClass === "middle") y *= 0.95 + Math.random() * 0.1;
+        if (socialClass === "high") y *= 1.1 + Math.random() * 0.1;
       }
 
-      // Következő év
+      values.push({ x: jan.getTime(), y });
+
+      // Július
+      const jul = new Date(date);
+      jul.setMonth(6);
+      y = base + (Math.random() - 0.5) * (volatility * 0.5) + (jul.getFullYear() - 2005) * getTrend();
+
+      if (jul.getFullYear() === 2008 || jul.getFullYear() === 2009) {
+        if (socialClass === "lower") y *= 0.8 + Math.random() * 0.05;
+        if (socialClass === "middle") y *= 0.85 + Math.random() * 0.05;
+        if (socialClass === "high") y *= 0.9 + Math.random() * 0.05;
+      }
+
+      if (jul.getFullYear() === 2021) {
+        if (socialClass === "lower") y *= 0.95 + Math.random() * 0.05;
+        if (socialClass === "middle") y *= 0.95 + Math.random() * 0.1;
+        if (socialClass === "high") y *= 1.1 + Math.random() * 0.1;
+      }
+
+      values.push({ x: jul.getTime(), y });
+
       date.setFullYear(date.getFullYear() + 1);
     }
 
@@ -165,19 +143,23 @@ const MultiLineChart: React.FC = () => {
   const colors = d3.schemeCategory10;
   // 🎨 Családok definiálása
   const families = [
-    { id: "Smith", color: colors[0], base: 1200, vol: 300, currency: "USD", socialClass: "lower" },
-    { id: "Dower", color: colors[1], base: 1500, vol: 350, currency: "USD", socialClass: "lower" },
-    { id: "Wilson", color: colors[2], base: 1800, vol: 400, currency: "USD", socialClass: "lower" },
-    { id: "Evans", color: colors[3], base: 2000, vol: 450, currency: "USD", socialClass: "lower" },
+    // 🇺🇸 Amerikai családok
+    { id: "Smith", color: colors[0], base: 800, vol: 80, currency: "USD", socialClass: "lower" },
+    { id: "Evans", color: colors[1], base: 2000, vol: 250, currency: "USD", socialClass: "middle" },
+    { id: "Johnson", color: colors[2], base: 4000, vol: 500, currency: "USD", socialClass: "high" },
+    { id: "Williams", color: colors[3], base: 1200, vol: 120, currency: "USD", socialClass: "lower" },
 
-    { id: "Blackwood", color: colors[4], base: 4000, vol: 1000, currency: "EUR", socialClass: "middle" },
-    { id: "Miller", color: colors[5], base: 5000, vol: 1200, currency: "EUR", socialClass: "middle" },
-    { id: "Johnson", color: colors[6], base: 6000, vol: 1500, currency: "EUR", socialClass: "middle" },
+    // 🇬🇧 Brit családok
+    { id: "Dower", color: colors[4], base: 2500, vol: 300, currency: "GBP", socialClass: "middle" },
+    { id: "Blackwood", color: colors[5], base: 4500, vol: 500, currency: "GBP", socialClass: "high" },
+    { id: "Brown", color: colors[6], base: 1500, vol: 180, currency: "GBP", socialClass: "lower" },
 
-    { id: "Anderson", color: colors[7], base: 10000, vol: 2500, currency: "GBP", socialClass: "high" },
-    { id: "Williams", color: colors[8], base: 12000, vol: 2800, currency: "GBP", socialClass: "high" },
-    { id: "Brown", color: colors[9], base: 15000, vol: 3000, currency: "GBP", socialClass: "high" },
+    // 🇩🇪 Német családok
+    { id: "Wilson", color: colors[7], base: 2000, vol: 220, currency: "EUR", socialClass: "middle" },
+    { id: "Miller", color: colors[8], base: 4000, vol: 450, currency: "EUR", socialClass: "high" },
+    { id: "Anderson", color: colors[9], base: 1000, vol: 120, currency: "EUR", socialClass: "lower" },
   ] as const;
+
 
   const [data] = useState<LineSeries[]>(() =>
     families.map(f =>
@@ -186,7 +168,7 @@ const MultiLineChart: React.FC = () => {
   );
 
   // 🔥 Kezdetben csak 1-1 család látszik minden classból
-  const [selectedIds, setSelectedIds] = useState<string[]>(["Smith", "Blackwood", "Anderson"]);
+  const [selectedIds, setSelectedIds] = useState<string[]>(["Smith", "Blackwood", "Wilson"]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredModalData = data.filter((series) =>
@@ -379,12 +361,18 @@ const MultiLineChart: React.FC = () => {
       .attr("fill", d => d.color)
       .style("opacity", 0)
       .on("mouseover", function (event, d) {
+        const yInUSD = d.y * exchangeRates[d.currency as typeof currencies[number]];
+        console.log(d.y)
+        console.log(d.currency)
+        console.log(exchangeRates[d.currency as typeof currencies[number]])
+        console.log(yInUSD)
+
         tooltip
           .style("opacity", 1)
           .html(`
             <div>
               <span>
-              ${d.y.toFixed(1)} ${d.currency}
+               ${d.y.toFixed(1)} USD (~${yInUSD.toFixed(1)} ${d.currency})
               </span><br />
               ${formatDateUS(new Date(d.x))}
             </div>

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import MultiLineChart from "./components/MultiLineChart";
 import './App.css'
 

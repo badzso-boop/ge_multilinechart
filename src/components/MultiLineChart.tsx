@@ -329,6 +329,10 @@ const MultiLineChart: React.FC = () => {
         d3.selectAll(".line-path, .label-rect, .label-text")
           .classed("inactive", false)
           .classed("active", false)
+        
+        d3.selectAll(".label-line")
+          .classed("inactive", true)
+        
 
         d3.selectAll(".data-point")
           .transition()

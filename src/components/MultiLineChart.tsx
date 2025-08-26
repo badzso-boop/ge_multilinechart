@@ -250,6 +250,8 @@ const MultiLineChart: React.FC = () => {
       const group = svg.append("g")
         .attr("class", `y-axis y-axis-${curr}`)
         .attr("transform", `translate(${margin.left},${margin.top})`)
+        .style("font-size", "14px")
+        .style("font-family", "sans-serif")
         .style("opacity", 0) // ✅ alapból elrejtjük
 
       // Tengely számokkal
@@ -265,8 +267,9 @@ const MultiLineChart: React.FC = () => {
         .attr("x", -10)     // a tengely bal oldalán kívülre
         .attr("y", -10)     // a tengely tetejére
         .attr("fill", "black")
-        .attr("font-size", "12px")
         .attr("font-weight", "bold")
+        .style("font-size", "14px")
+        .style("font-family", "sans-serif")
         .style("opacity", 0) // ✅ alapból elrejtve
         .text(curr);
     });
@@ -329,10 +332,9 @@ const MultiLineChart: React.FC = () => {
         d3.selectAll(".line-path, .label-rect, .label-text")
           .classed("inactive", false)
           .classed("active", false)
-        
+
         d3.selectAll(".label-line")
           .classed("inactive", true)
-        
 
         d3.selectAll(".data-point")
           .transition()
@@ -384,12 +386,13 @@ const MultiLineChart: React.FC = () => {
         tooltip
           .style("opacity", 1)
           .html(`
-            <div>
-              <span>
-              
+            <div class='text-center'>
+              <span class='text-base'>
               ${yInUSD.toFixed(1)} ${d.currency}
               </span><br />
-              ${formatDateUS(new Date(d.x))}
+              <span class='text-sm'>
+                ${formatDateUS(new Date(d.x))}
+              </span>
             </div>
           `)
       })

@@ -1,16 +1,8 @@
 import React, { useState } from "react";
-
-interface LineValue {
-  x: number;
-  y: number;
-}
-
-interface LineSeries {
-  id: string           // vonal neve (pl. "Family A")
-  values: LineValue[] // a vonalhoz tartozó pontok
-  color: string        // a vonal színe
-  currency: string
-}
+import Error from "../images/error.png"
+import Search from "../images/search.png"
+import Reset from "../images/reset.png"
+import { LineSeries } from "./MultiLineChartDemo";
 
 interface TrendsModalProps {
   isOpen: boolean;
@@ -30,6 +22,7 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
   onSelectionChange,
 }) => {
   const [localSelection, setLocalSelection] = useState<string[]>(selectedIds);
+  const [showWarning, setShowWarning] = useState(false);
 
   if (!isOpen) return null;
 
@@ -37,9 +30,10 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
     let updated: string[];
     if (localSelection.includes(id)) {
       updated = localSelection.filter((item) => item !== id);
+      setShowWarning(false);
     } else {
       if (localSelection.length >= 5) {
-        alert("Egyszerre legfeljebb 5 család választható ki.");
+        setShowWarning(true);
         return;
       }
       updated = [...localSelection, id];
@@ -49,6 +43,7 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
   };
 
   const resetToDefault = () => {
+    setShowWarning(false);
     setLocalSelection(DEFAULT_SELECTION);
     onSelectionChange(DEFAULT_SELECTION);
   };
@@ -64,44 +59,53 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
 
 
       {/* Modal tartalom */}
-      <div className="relative bg-white rounded-2xl shadow-lg w-[500px] max-w-3xl p-4 z-[101]">
+      <div className="relative bg-white rounded-2xl shadow-lg w-[500px] h-[398px] max-w-3xl p-4 z-[101]">
         
 
-        <div className="w-full flex flex-wrap my-2 justify-between">
-          <div className="pl-[10px] pr-[60px] italic bg-[#ececf0]">
-            Search trends
+        <div className="w-full flex flex-wrap my-2 justify-between items-center">
+          <div className="bg-[#ececf0] w-[204px] h-[34px] flex flex-wrap items-center justify-between px-[12px]">
+            
+            <span className="italic">
+              Search trends
+            </span>
+
+            <img src={Search} className="w-[16px] h-[16px]" alt="search icon" />
           </div>
 
           <div
-            className="text-[#7252bc] cursor-pointer"
+            className="text-[#7252bc] cursor-pointer flex flex-wrap items-center"
             onClick={resetToDefault}
           >
-            Reset to default
+            <img src={Reset} className="mx-2 w-[16px] h-[16px] text-[#7252bc]" alt="reset image" />
+            <span className="mx-2">
+              Reset to default
+            </span>
           </div>
 
           {/* Bezárás gomb */}
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 cursor-pointer"
+            className="text-gray-500 hover:text-gray-800 cursor-pointer text-xl"
           >
             ✕
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center">
-          <div className="mx-2">
-            .
+        {showWarning && (
+          <div className="relative flex flex-wrap items-center bg-gray-300">
+            <div className=" bg-gray-600 text-gray-600 w-[12px] absolute left-0">
+              .
+            </div>
+            <img src={Error} alt="error image" className="ml-5" />
+            <div className="mx-2">
+              For best view, select no more than 5 trends. 
+            </div>
           </div>
-          <div className="mx-2">
-            i
-          </div>
-          <div className="mx-2">
-            For best view, select no more than 5 trends. 
-          </div>
-        </div>
+        )}
 
-        <div className="space-y-3 my-2">
-          {data.map((series) => (
+
+        <div className="grid grid-cols-2 gap-4 my-2">
+          {data.slice(0, 5).map((series) => (
             <label
               key={series.id}
               className="flex items-center space-x-2 cursor-pointer"
@@ -112,9 +116,22 @@ const TrendsModal: React.FC<TrendsModalProps> = ({
                 onChange={() => toggleId(series.id)}
                 className="h-4 w-4 bg-[#d7d8db]"
               />
-              <span>
-                {series.id} - {series.currency} - {series.socialClass}
-              </span>
+              <span>{series.id} ({series.currency}) - ({series.socialClass})</span>
+            </label>
+          ))}
+
+          {data.slice(5, 10).map((series) => (
+            <label
+              key={series.id}
+              className="flex items-center space-x-2 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={localSelection.includes(series.id)}
+                onChange={() => toggleId(series.id)}
+                className="h-4 w-4 bg-[#d7d8db]"
+              />
+              <span>{series.id} ({series.currency}) - ({series.socialClass})</span>
             </label>
           ))}
         </div>

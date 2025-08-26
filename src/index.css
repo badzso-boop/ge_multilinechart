@@ -1,24 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-
-@font-face {
-  font-family: 'MyFont';
-  src: local('MyFont'), url('./FONTS/GEInspiraSans_2789225988.ttf') format('truetype');
-  font-weight: normal;
-}
-
-@font-face {
-  font-family: 'MyFont';
-  src: local('MyFontBold'), url('./FONTS/GEInspiraSans-Bold_72673719.ttf') format('truetype');
-  font-weight: bold;
-}
-
-* {
-  font-family: 'MyFont', sans-serif;
-}
-
+@import "tailwindcss";
 
 .line-path.inactive {
   opacity: 0.1;
@@ -28,6 +8,11 @@
 .line-path.active {
   opacity: 1;
   stroke-width: 3;
+}
+
+.label-line.inactive {
+  opacity: 0.1;
+  transition: opacity 0.3s ease;
 }
 
 .label-rect.inactive {
@@ -40,10 +25,15 @@
   transition: opacity 0.3s ease;
 }
 
-.label-line.inactive {
-  opacity: 0.1;
-  transition: opacity 0.3s ease;
+.active-btn {
+  background-color: #ada6c4;
 }
+
+.custom-opacity {
+  opacity: 75% !important;
+  background-color: black;
+}
+
 
 .marker-div {
   font-size: 20px;
@@ -54,187 +44,7 @@ svg {
   overflow: visible;
 }
 
-.active-btn {
-  background-color: #ADA6C4;
-}
-
-.custom-opacity {
-  opacity: 75% !important;
-  background-color: black;
-}
-
-
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
-}
-
-.container {
-  height: 100% !important;
-  flex-direction: column;
-  flex-wrap: wrap;
-  column-count: 3;
-}
-
-  .checkbox-container {
-    position: relative;
-    cursor: pointer;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-  
-  /* Hide the browser's default checkbox */
-  .checkbox-container input {
-    position: absolute;
-    opacity: 0;
-    cursor: pointer;
-    height: 0;
-    width: 0;
-  }
-  
-  /* Create a custom checkbox */
-  .checkmark {
-    position: absolute;
-    height: 16px;
-    width: 16px;
-    background-color: #ECECF0;
-    border:#D7D8DB 1px solid ;
-  }
-  
-  /* On mouse-over, add a grey background color */
-  .checkbox-container:hover input ~ .checkmark {
-    background-color: #ccc;
-  }
-  
-  /* When the checkbox is checked, add a blue background */
-  .checkbox-container input:checked ~ .checkmark {
-    background-color: #63666A;
-  }
-  
-  /* Create the checkmark/indicator (hidden when not checked) */
-  .checkmark:after {
-    content: "";
-    position: absolute;
-    display: none;
-  }
-  
-  /* Show the checkmark when checked */
-  .checkbox-container input:checked ~ .checkmark:after {
-    display: block;
-  }
-  
-  /* Style the checkmark/indicator */
-  .checkbox-container .checkmark:after {
-    left:4.4px;
-    top:2px;
-    width: 5px;
-    height: 8px;
-    border: solid white;
-    border-width: 0 3px 3px 0;
-    transform: rotate(45deg);
-  }
-
-  .rc-slider-track:hover{
-   cursor:grab
-  }
-  .rc-slider-handle-dragging{
-    background-color: #7252BC !important;
-    opacity: 1 !important;
-    outline: rgba(127, 129, 133, 0.1) solid 10px !important
-  }
- .activeTimeRange{
-  background-color:#ADA6C4 ;
-  border:1px solid #7252BC;
- }
-
- .rectangle {
-  z-index: 10;
-  rotate: 180deg;
-  width: 100px;
-  height: 34px;
-  margin-bottom: 10px;
-  background-color: #ECECF0;
-
-}
-
-.apexcharts-xaxistooltip{
-  display: none;
-}
-.inactiveChart>div>div>.apexcharts-tooltip>.apexcharts-tooltip-series-group{
- display:none !important;
-}
-
-.apexcharts-xcrosshairs{
-  stroke-dasharray: none !important;
-  stroke:#7252BC !important;
-  display:flex
-}
-
-
-
-
-.arrow_box{
-  width: 110px;
-  height: 60px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  background-color: #1d1f20;
-  border-radius: 0.2rem;
-  color:white
-}
-
-.arrow_box>span{
-font-size: 18px;
-font-weight: 500;
-}
-.inactiveChart>div>div>div>.arrow_box{
-  display: none;
-}
-
-
-.apexcharts-series>.apexcharts-rangeArea {
-  stroke: transparent !important;
-  stroke-width: 2px !important;
-  stroke-dasharray: 5 !important;
-  fill:rgba(0, 0, 0, 0.07)!important;
-}
-.apexcharts-series{
-  background-color: red!;
-  border:1px solid black !important;
-}
-.reference{
-  background-color: rgba(0, 0, 0, 0.07);
-  
-}
-
-.apexcharts-xaxis-label{
-  transform: rotate(0)!important;
-}
-
-.apexcharts-xaxis
-{
-  display: flex !important;
-  margin-right: 100px !important;
-}
-
-
-.grid-container {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)); /* automatikusan kitölti a sort 200px széles oszlopokkal */
-  /* gap: 10px; */
-
+.tooltip {
+  transition: opacity 0.2s ease;
+  z-index: 9999;
 }

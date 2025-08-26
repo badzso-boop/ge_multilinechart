@@ -3,49 +3,44 @@ import Slider from '@mui/material/Slider';
 import TrendsModal from "./TrendsModal";
 import React, { useRef, useEffect, useState } from "react"
 
-// Képek importálása marker ikonokhoz
+// Marker ikonok
 import Covid from "../images/covid.png"
 import Valsag from "../images/valsag.png"
 
-// Egyetlen adatpont típusa
+// Egyetlen pont típusa
 interface LineDataPoint {
-  x: number // X koordináta (pl. év, hónap index)
-  y: number // Y érték (pl. pénz, darabszám)
+  x: number // Időbélyeg (timestamp)
+  y: number // Érték (pl. összeg, darabszám)
 }
 
-interface DataPointWithMeta extends LineDataPoint {
-  color: string;
-  parentId: string;
-  lineIndex: number;
-  currency: string;
-}
-
-// Egy teljes vonal adatsor típusa
+// Egy vonalsorozat típusa
 export interface LineSeries {
-  id: string           // vonal neve (pl. "Family A")
-  values: LineDataPoint[] // a vonalhoz tartozó pontok
-  color: string        // a vonal színe
-  currency: string
+  id: string              // vonal neve (pl. család neve)
+  values: LineDataPoint[] // pontok a vonalon
+  color: string           // szín
+  currency: string        // pénznem
   socialClass: SocialClass
 }
 
 type SocialClass = "lower" | "middle" | "high";
 
 const MultiLineChart: React.FC = () => {
-  // React ref, hogy az SVG DOM elemhez hozzáférjünk
   const ref = useRef<SVGSVGElement | null>(null)
 
-  function dateToTimestamp(date: Date) {
-    return date.getTime();
+   // --- Segédfüggvények ---
+  const dateToTimestamp = (date: Date) => date.getTime();
+  const timestampToDateString = (timestamp: number) => new Date(timestamp).toISOString().slice(0, 10);
+
+  const formatDateUS = (date: Date) => {
+    const d = new Date(date)
+    const day = String(d.getDate()).padStart(2, '0')
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    return `${monthNames[d.getMonth()]} ${day}, ${d.getFullYear()}`
   }
 
-  function timestampToDateString(timestamp: number) {
-    const d = new Date(timestamp);
-    return d.toISOString().slice(0, 10); // YYYY-MM-DD formátum
-  }
-
+  // --- "Last 6 months" gomb ---
   function Last6Month() {
-    setRangeVIsible(false);
+    setRangeVisible(false);
 
     const today = new Date();
     const sixMonthsAgo = new Date();
@@ -57,22 +52,26 @@ const MultiLineChart: React.FC = () => {
     ]);
   }
 
-  function formatDateUS(date: Date) {
-    const d = new Date(date)
-    const day = String(d.getDate()).padStart(2, '0');
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    const month = monthNames[d.getMonth()];
-    const year = d.getFullYear();
-    return `${month} ${day}, ${year}`
-  }
+  // --- Slider esemény ---
+  const handleChange = (event: Event, newValue: number | number[]) => {
+    if (Array.isArray(newValue)) {
+      setDateRange(newValue as [number, number]);
+    }
+  };
 
-  const startDate = new Date(2005, 0, 1) // 2005 január
-  const endDate = new Date(2025, 8, 31) // 2023 december
-  const [dateRange, setDateRange] = React.useState<[number, number]>([
+  // --- Alap dátumtartomány ---
+  const startDate = new Date(2005, 0, 1)
+  const endDate = new Date(2025, 8, 31)
+  const [dateRange, setDateRange] = useState<[number, number]>([
     dateToTimestamp(startDate),
     dateToTimestamp(endDate),
   ])
+
+  
   const [hoverWidth, setHoverWidth] = useState(15);
+  const [rangeVisible, setRangeVisible] = useState(true);
+
+  // --- Pénznemek és árfolyamok ---
   const currencies = ["USD", "EUR", "GBP"] as const;
   const exchangeRates: Record<typeof currencies[number], number> = {
     USD: 1,
@@ -80,7 +79,7 @@ const MultiLineChart: React.FC = () => {
     GBP: 0.74,
   };
 
-  // 🔥 Új adatgenerátor: évente max 2 pont (jan, júl)
+  // --- Random adatgenerálás családokra ---
   function generateYearlyData(
     id: string,
     color: string,
@@ -93,27 +92,27 @@ const MultiLineChart: React.FC = () => {
     const date = new Date(2005, 0, 1);
     const endDate = new Date(2025, 0, 1);
 
-    while (date <= endDate) {
-      // 🔹 segéd függvény a trendhez
-      const getTrend = () => {
-        if (socialClass === "lower") return 20 + Math.random() * 30;
-        if (socialClass === "middle") return 50 + Math.random() * 100;
-        if (socialClass === "high") return 100 + Math.random() * 100;
-        return 0;
-      };
+    const getTrend = () => {
+      if (socialClass === "lower") return 20 + Math.random() * 30;
+      if (socialClass === "middle") return 50 + Math.random() * 100;
+      if (socialClass === "high") return 100 + Math.random() * 100;
+      return 0;
+    };
 
+    while (date <= endDate) {
       // Január
       const jan = new Date(date);
-      let y = base + (Math.random() - 0.5) * (volatility * 0.5) + (jan.getFullYear() - 2005) * getTrend();
+      let y = base + (Math.random() - 0.5) * (volatility * 0.5) +
+              (jan.getFullYear() - 2005) * getTrend();
 
-      // Válság 2008-2009
-      if (jan.getFullYear() === 2008 || jan.getFullYear() === 2009) {
+      // 2008-2009 válság hatása
+      if ([2008, 2009].includes(jan.getFullYear())) {
         if (socialClass === "lower") y *= 0.8 + Math.random() * 0.05;
         if (socialClass === "middle") y *= 0.85 + Math.random() * 0.05;
         if (socialClass === "high") y *= 0.9 + Math.random() * 0.05;
       }
 
-      // COVID 2021
+      // Covid hatása 2021-ben
       if (jan.getFullYear() === 2021) {
         if (socialClass === "lower") y *= 0.95 + Math.random() * 0.05;
         if (socialClass === "middle") y *= 0.95 + Math.random() * 0.1;
@@ -125,9 +124,10 @@ const MultiLineChart: React.FC = () => {
       // Július
       const jul = new Date(date);
       jul.setMonth(6);
-      y = base + (Math.random() - 0.5) * (volatility * 0.5) + (jul.getFullYear() - 2005) * getTrend();
+      y = base + (Math.random() - 0.5) * (volatility * 0.5) +
+          (jul.getFullYear() - 2005) * getTrend();
 
-      if (jul.getFullYear() === 2008 || jul.getFullYear() === 2009) {
+      if ([2008, 2009].includes(jul.getFullYear())) {
         if (socialClass === "lower") y *= 0.8 + Math.random() * 0.05;
         if (socialClass === "middle") y *= 0.85 + Math.random() * 0.05;
         if (socialClass === "high") y *= 0.9 + Math.random() * 0.05;
@@ -140,100 +140,127 @@ const MultiLineChart: React.FC = () => {
       }
 
       values.push({ x: jul.getTime(), y });
-
       date.setFullYear(date.getFullYear() + 1);
     }
 
     return { id, color, values, currency, socialClass };
   }
 
+  // --- Családok definiálása ---
   const colors = d3.schemeCategory10;
-  // 🎨 Családok definiálása
   const families = [
-    // 🇺🇸 Amerikai családok
     { id: "Smith", color: colors[0], base: 800, vol: 80, currency: "USD", socialClass: "lower" },
     { id: "Evans", color: colors[1], base: 2000, vol: 250, currency: "USD", socialClass: "middle" },
     { id: "Johnson", color: colors[2], base: 4000, vol: 500, currency: "USD", socialClass: "high" },
     { id: "Williams", color: colors[3], base: 1200, vol: 120, currency: "USD", socialClass: "lower" },
-
-    // 🇬🇧 Brit családok
     { id: "Dower", color: colors[4], base: 2500, vol: 300, currency: "GBP", socialClass: "middle" },
     { id: "Blackwood", color: colors[5], base: 4500, vol: 500, currency: "GBP", socialClass: "high" },
     { id: "Brown", color: colors[6], base: 1500, vol: 180, currency: "GBP", socialClass: "lower" },
-
-    // 🇩🇪 Német családok
     { id: "Wilson", color: colors[7], base: 2000, vol: 220, currency: "EUR", socialClass: "middle" },
     { id: "Miller", color: colors[8], base: 4000, vol: 450, currency: "EUR", socialClass: "high" },
     { id: "Anderson", color: colors[9], base: 1000, vol: 120, currency: "EUR", socialClass: "lower" },
   ] as const;
 
-  const sortedFamilies = [...families].sort((a, b) =>
-    a.id.localeCompare(b.id)
-  );
-
+  const sortedFamilies = [...families].sort((a, b) => a.id.localeCompare(b.id));
   const [data] = useState<LineSeries[]>(() =>
     sortedFamilies.map(f =>
       generateYearlyData(f.id, f.color, f.base, f.vol, f.currency, f.socialClass)
     )
   );
 
-  
-
-  // 🔥 Kezdetben csak 1-1 család látszik minden classból
+  // --- Állapotok ---
   const [selectedIds, setSelectedIds] = useState<string[]>(["Smith", "Blackwood", "Wilson"]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const filteredModalData = data.filter((series) =>
-    selectedIds.includes(series.id)
-  );
+  // --- Szűrt adatok csak kiválasztott családokra ---
+  const filteredModalData = data.filter(series => selectedIds.includes(series.id));
 
-  const handleChange = (event: Event, newValue: number | number[]) => {
-    if (Array.isArray(newValue)) {
-      setDateRange(newValue as [number, number]);
-    }
-  };
-
-  const [rangeVisible, setRangeVIsible] = useState(true);
-
-  // A D3 rajzolás csak a komponens betöltése után fusson le
+  
+  // --- Tooltip inicializálása csak egyszer ---
+  const tooltipRef = useRef<d3.Selection<HTMLDivElement, unknown, HTMLElement, any> | null>(null);
   useEffect(() => {
+    if (!tooltipRef.current) {
+      tooltipRef.current = d3.select("body")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("position", "absolute")
+        .style("background", "rgba(0, 0, 0, 0.7)")
+        .style("color", "#fff")
+        .style("padding", "5px 10px")
+        .style("border-radius", "4px")
+        .style("pointer-events", "none")
+        .style("font-size", "12px")
+        .style("opacity", 0);
+    }
+  }, []);
 
-    // 1️⃣ Margók és rajzterület beállítása
-    const margin = { top: 60, right: 30, bottom: 30, left: 50 }
-    const width = 800 - margin.left - margin.right
-    const height = 400 - margin.top - margin.bottom
 
-    // 2️⃣ SVG elem kiválasztása és méretezése
+
+
+
+
+  useEffect(() => {
+    const tooltip = d3.select("body").append("div").attr("class", "tooltip")
+
+    return () => {
+      tooltip.remove(); // ✅ cleanup
+    }
+  }, [dateRange, filteredModalData, hoverWidth]);
+
+
+
+
+
+  // --- D3 grafikon rajzolás ---
+  useEffect(() => {
+    if (!ref.current) return;
+
+    // --- 1️⃣ Beállítások: méretek és margók ---
+    const margin = { top: 60, right: 150, bottom: 30, left: 50 };
+    const width = 800 - margin.left - margin.right;
+    const height = 400 - margin.top - margin.bottom;
+
     const svg = d3.select(ref.current)
       .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom)
+      .attr("height", height + margin.top + margin.bottom);
 
-    // Minden korábbi tartalom törlése (újrarenderelésnél fontos)
-    svg.selectAll("*").remove()
+    // Töröljük a korábbi elemeket újrarajzolás előtt
+    svg.selectAll("*").remove();
 
-    // 3️⃣ Rajzterület csoport létrehozása, margókkal eltolva
-    const g = svg.append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`)
+    // Rajzterület létrehozása
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
+    // --- 2️⃣ Szűrt adatok a jelenlegi dátumtartományra ---
     const filteredData = filteredModalData.map(series => ({
       ...series,
-      // values: series.values.filter(v => v.x >= dateRange[0] && v.x <= dateRange[1])
-      values: series.values
-    }))
+      values: series.values.filter(v => v.x >= dateRange[0] && v.x <= dateRange[1])
+    }));
 
-    g.append("defs")
-      .append("clipPath")
+    // ClipPath a vonalak vágásához
+    g.append("defs").append("clipPath")
       .attr("id", "clip")
       .append("rect")
       .attr("width", width)
       .attr("height", height);
 
-    // 5️⃣ Skálák létrehozása
+    // --- 3️⃣ Skálák ---
     const x = d3.scaleTime()
       .domain([new Date(dateRange[0]), new Date(dateRange[1])])
       .range([0, width])
 
-    // 6️⃣ Tengelyek rajzolása
+    
+    // Y skála a legnagyobb USD-érték alapján
+    const allYValues = filteredData.flatMap(series =>
+      series.values.map(v => v.y * exchangeRates[series.currency as typeof currencies[number]])
+    );
+    const yMax = d3.max(allYValues) || 1;
+    const yScale = d3.scaleLinear()
+      .domain([0, yMax])
+      .nice()
+      .range([height, 0]);
+
+    // --- 4️⃣ Tengelyek ---
     g.append("g")
       .attr("transform", `translate(0,${height})`)
       .call(d3.axisBottom(x).ticks(6))
@@ -241,80 +268,60 @@ const MultiLineChart: React.FC = () => {
       .style("font-size", "14px")
       .style("font-family", "sans-serif");
 
-    // const allYValuesFiltered = filteredData.flatMap(series =>
-    //   series.values.map(v => v.y * exchangeRates[series.currency as typeof currencies[number]])
-    // );
-
-    const allYValuesFiltered = filteredData.flatMap(series =>
-      series.values.map(v => v.y * exchangeRates[series.currency as typeof currencies[number]])
-    );
-
-    const maxY = d3.max(allYValuesFiltered) || 1;
-    console.log(maxY)
-
-    const yScale = d3.scaleLinear()
-      .domain([0, maxY])
-      .nice()
-      .range([height, 0]);
-
+    // Pénznemhez tartozó Y tengelyek, alapból rejtve
     currencies.forEach(curr => {
-      const group = svg.append("g")
+      const yAxisGroup = svg.append("g")
         .attr("class", `y-axis y-axis-${curr}`)
         .attr("transform", `translate(${margin.left},${margin.top})`)
-        .style("font-size", "14px")
-        .style("font-family", "sans-serif")
-        .style("opacity", 0) // ✅ alapból elrejtjük
+        .style("opacity", 0)
+        .call(d3.axisLeft(yScale).ticks(5).tickFormat(d => (Number(d)).toFixed(0)));
 
-      // Tengely számokkal
-      group.call(
-        d3.axisLeft(yScale)
-          .ticks(5)
-          .tickFormat(d => (Number(d)).toFixed(0))
-      );
-
-      // Valuta címke külön szövegként, a tengely tetejére
-      group.append("text")
+      yAxisGroup.append("text")
         .attr("class", `y-axis-currency currency-${curr}`)
-        .attr("x", -10)     // a tengely bal oldalán kívülre
-        .attr("y", -10)     // a tengely tetejére
+        .attr("x", -10)
+        .attr("y", -10)
         .attr("fill", "black")
         .attr("font-weight", "bold")
         .style("font-size", "14px")
-        .style("font-family", "sans-serif")
-        .style("opacity", 0) // ✅ alapból elrejtve
+        .style("opacity", 0)
         .text(curr);
     });
 
-    const lineGenerators = filteredData.map((series, i) => {
-      return d3.line<LineDataPoint>()
+    // --- 5️⃣ Vonal generátor létrehozása minden sorozathoz ---
+    const lineGenerators = filteredData.map(series =>
+      d3.line<LineDataPoint>()
         .x(d => x(d.x))
         .y(d => yScale(d.y * exchangeRates[series.currency as typeof currencies[number]]))
-    })
+    );
 
-    // 8️⃣ Vonalcsoportok létrehozása + hover események
+    // --- 6️⃣ Vonalcsoportok létrehozása és hover események ---
     const lines = g.selectAll(".line-group, .label-rect, .label-text, .data-point")
       .data(filteredData)
       .enter()
       .append("g")
       .attr("class", "line-group")
       .on("mouseenter", function (_, d) {
-        // Minden vonal elhalványítása
+        if (hoveredId && hoveredId !== d.id) return;
+          setHoveredId(d.id);
+
+        d3.select(this).raise();
+
+        d3.select(this).select(".line-hover-area")
+          .style("pointer-events", hoveredId && hoveredId !== d.id ? "none" : "all")
+
         d3.selectAll(".line-path, .label-rect, .label-text, .label-line")
           .classed("inactive", true)
           .classed("active", false)
 
-        // Aktuális vonal és címke kiemelése
         d3.select(this).select(".line-path, .label-rect, .label-text")
           .classed("inactive", false)
           .classed("active", true)
 
-        // Adatpontok megjelenítése
         d3.select(this).selectAll(".data-point")
           .transition()
           .duration(200)
           .style("opacity", 1)
 
-        // Kapcsolódó címkék kiemelése
         d3.selectAll(`.label-rect.label-${d.id.replace(/\s+/g, '-')}`)
           .classed("inactive", false)
           .classed("active", true)
@@ -336,10 +343,14 @@ const MultiLineChart: React.FC = () => {
           .transition()
           .duration(200)
           .style("opacity", 1)
-
       })
-      .on("mouseleave", function () {
-        // Minden visszaáll alapállapotba
+      .on("mouseleave", function (_, d) {
+        if (hoveredId !== d.id) return;
+          setHoveredId(null);
+
+        d3.select(this).select(".line-hover-area")
+          .style("pointer-events", "all");
+
         d3.selectAll(".line-path, .label-rect, .label-text")
           .classed("inactive", false)
           .classed("active", false)
@@ -352,7 +363,6 @@ const MultiLineChart: React.FC = () => {
           .duration(200)
           .style("opacity", 0)
 
-        // Tengely elrejtése
         d3.selectAll(".y-axis")
           .transition()
           .duration(200)
@@ -364,17 +374,16 @@ const MultiLineChart: React.FC = () => {
           .style("opacity", 0)
       })
 
-    // 9️⃣ Láthatatlan hover terület a könnyebb egérkezeléshez
+
+    // --- 7️⃣ Láthatatlan hover terület ---
     lines.append("path")
       .attr("class", "line-hover-area")
       .attr("fill", "none")
-      // .attr("stroke", "transparent")
-      .attr("opacity", 0.2) 
-      .attr("stroke", "red")
+      .attr("stroke", "transparent")
       .attr("stroke-width", hoverWidth)
       .attr("d", (d,i) => lineGenerators[i](d.values) ?? "")
 
-    // 🔟 Látható vonal kirajzolása
+    // --- 8️⃣ Látható vonalak ---
     lines.append("path")
       .attr("class", "line-path")
       .attr("clip-path", "url(#clip)")
@@ -383,7 +392,7 @@ const MultiLineChart: React.FC = () => {
       .attr("stroke-width", 2)
       .attr("d", (d,i) => lineGenerators[i](d.values) ?? "")
 
-    // 1️⃣1️⃣ Adatpontok kirajzolása + tooltip események
+    // --- 9️⃣ Adatpontok kirajzolása és tooltip események ---
     lines.selectAll(".data-point")
       .data((d, i) => d.values
                         .filter(v => v.x >= dateRange[0] && v.x <= dateRange[1])
@@ -398,7 +407,7 @@ const MultiLineChart: React.FC = () => {
       .style("opacity", 0)
       .on("mouseover", function (event, d) {
         const yInUSD = d.y * exchangeRates[d.currency as typeof currencies[number]];
-        // ${d.y.toFixed(1)} USD (~${yInUSD.toFixed(1)} ${d.currency}) <br ˛>
+        const tooltip = tooltipRef.current!;
         tooltip
           .style("opacity", 1)
           .html(`
@@ -413,16 +422,20 @@ const MultiLineChart: React.FC = () => {
           `)
       })
       .on("mousemove", function (event) {
+        const tooltip = tooltipRef.current!;
+
         tooltip
           .style("left", (event.pageX - 75 / 2) + "px")
           .style("top", (event.pageY + 20) + "px")
       })
-      .on("mouseout", function () {
+      .on("mouseleave", function () {
+        const tooltip = tooltipRef.current!;
+
         tooltip
           .style("opacity", 0)
       })
 
-    // 1️⃣2️⃣ Szöveg színének automatikus választása háttér alapján
+    // --- 1️⃣0️⃣ Címkék rajzolása a vonalak végére ---
     function getContrastColor(hexColor: string): string {
       hexColor = hexColor.replace("#", "")
       const r = parseInt(hexColor.substring(0, 2), 16)
@@ -432,10 +445,8 @@ const MultiLineChart: React.FC = () => {
       return luminance > 186 ? "black" : "white"
     }
 
-    // 1️⃣3️⃣ Címkék rajzolása a vonalak végére
-    const labelSpacing = 30 // px távolság a címkék között
-    const labelStartX = width + 20 // címke kezdő X pozíció
-
+    const labelSpacing = 30
+    const labelStartX = width + 20
     lines.each(function (line, i) {
       if (!line.values.length) return;
 
@@ -458,7 +469,6 @@ const MultiLineChart: React.FC = () => {
       if (!bbox) return
 
       const labelY = i * labelSpacing
-
 
       // Összekötő vonal a grafikon utolsó pontjától a címkéig
       g.append("line")
@@ -496,14 +506,29 @@ const MultiLineChart: React.FC = () => {
       tempText.remove()
     })
 
-    // 1️⃣4️⃣ Marker események (pl. válság, Covid)
-    const markers = [
-      { xVal: new Date(2008, 9, 11), label: "Financial crisis", img: Valsag, widthI: 40, heightI: 40 },
-      { xVal: new Date(2021, 2, 21), label: "Covid", img: Covid, widthI: 36, heightI: 36 },
-    ]
+    // --- 1️⃣1️⃣ Grafikon cím ---
+    svg.append("foreignObject")
+      .attr("x", margin.left)
+      .attr("y", -40)
+      .attr("width", width)
+      .attr("height", 50)
+      .append("xhtml:div")
+      .style("width", "100%")
+      .style("text-align", "center")
+      .style("font-size", "20px")
+      .style("font-weight", "bold")
+      .text("Household budgets since 2005")
+      .style("z-index", "100")
+
+
+    // --- 1️⃣2️⃣ Marker események (válság, Covid) ---
+  const markers = [
+    { xVal: new Date(2008, 9, 11), label: "Financial crisis", img: Valsag, widthI: 40, heightI: 40 },
+    { xVal: new Date(2021, 2, 21), label: "Covid", img: Covid, widthI: 36, heightI: 36 },
+  ];
 
     markers.forEach(({ xVal, label, img, widthI, heightI }) => {
-      if (xVal.getTime() < dateRange[0] || xVal.getTime() > dateRange[1]) return // ne rajzold ki ha kívül van a tartományon
+      if (xVal.getTime() < dateRange[0] || xVal.getTime() > dateRange[1]) return
 
       const markerX = x(xVal)
 
@@ -543,23 +568,9 @@ const MultiLineChart: React.FC = () => {
         .style("font-weight", "bold")
         .text(label)
     })
+  }, [dateRange, filteredModalData, hoverWidth, hoveredId]) // useEffect csak egyszer fusson
 
-    // 1️⃣5️⃣ Tooltip div létrehozása (HTML, nem SVG)
-    const tooltip = d3.select("body")
-      .append("div")
-      .attr("class", "tooltip")
-      .style("position", "absolute")
-      .style("background", "rgba(0, 0, 0, 0.7)")
-      .style("color", "#fff")
-      .style("padding", "5px 10px")
-      .style("border-radius", "4px")
-      .style("pointer-events", "none")
-      .style("font-size", "12px")
-      .style("opacity", 0)
-
-  }, [dateRange, filteredModalData, hoverWidth]) // useEffect csak egyszer fusson
-
-  // Visszatérés: üres SVG, amit a D3 tölt fel
+  // --- JSX visszatérés ---
   return (
     <div>
       <TrendsModal
@@ -572,8 +583,11 @@ const MultiLineChart: React.FC = () => {
 
       <div className="flex flex-wrap justify-between">
         <div>
-          <button className="py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 flex flex-wrap items-center" onClick={() => setIsModalOpen(true)}>
-            Trends 
+          <button
+            className="py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 flex flex-wrap items-center"
+            onClick={() => setIsModalOpen(true)}
+          >
+            Trends
             <span className="ml-2 h-5 w-5 rounded-full bg-[#7252BC] text-white text-sm flex items-center justify-center">
               {selectedIds.length}
             </span>
@@ -581,39 +595,35 @@ const MultiLineChart: React.FC = () => {
         </div>
 
         <div>
-          <button className={`py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 ${rangeVisible ? "" : "active-btn"}`} onClick={() => Last6Month()}>
+          <button
+            className={`py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 ${rangeVisible ? "" : "active-btn"}`}
+            onClick={() => Last6Month()}
+          >
             Last 6 month
           </button>
-          <button className={`py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 ${rangeVisible ? "active-btn" : ""}`} onClick={() => setRangeVIsible(true)}>
+          <button
+            className={`py-[7px] px-[24px] text-base bg-gray-300 cursor-pointer border border-gray-200 ${rangeVisible ? "active-btn" : ""}`}
+            onClick={() => setRangeVisible(true)}
+          >
             Date range
           </button>
         </div>
       </div>
 
-
-      
-
-      {
-        rangeVisible && (
-          <div className="mx-12 mb-5 mt-5">
-            <Slider
-              value={dateRange}
-              min={dateToTimestamp(startDate)}
-              max={dateToTimestamp(endDate)}
-              onChange={handleChange}
-              valueLabelDisplay="auto"
-              valueLabelFormat={timestampToDateString}
-              step={24 * 3600 * 1000} // 1 nap lépésköz
-              sx={{
-                color: '#7252BC'
-              }}
-            />
-          </div>
-        )
-      }
-
-      <h1 className="text-center text-[18px]">Household budgets since 2005</h1>
-
+      {rangeVisible && (
+        <div className="mx-12 mb-5 mt-5">
+          <Slider
+            value={dateRange}
+            min={dateToTimestamp(startDate)}
+            max={dateToTimestamp(endDate)}
+            onChange={handleChange}
+            valueLabelDisplay="auto"
+            valueLabelFormat={timestampToDateString}
+            step={24 * 3600 * 1000}
+            sx={{ color: '#7252BC' }}
+          />
+        </div>
+      )}
 
       <svg className="mt-12" ref={ref}></svg>
     </div>

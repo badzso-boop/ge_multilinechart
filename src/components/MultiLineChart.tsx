@@ -167,9 +167,12 @@ const MultiLineChart: React.FC = () => {
     { id: "Anderson", color: colors[9], base: 1000, vol: 120, currency: "EUR", socialClass: "lower" },
   ] as const;
 
+  const sortedFamilies = [...families].sort((a, b) =>
+    a.id.localeCompare(b.id)
+  );
 
   const [data] = useState<LineSeries[]>(() =>
-    families.map(f =>
+    sortedFamilies.map(f =>
       generateYearlyData(f.id, f.color, f.base, f.vol, f.currency, f.socialClass)
     )
   );
@@ -423,9 +426,11 @@ const MultiLineChart: React.FC = () => {
     lines.each(function (line, i) {
       if (!line.values.length) return;
 
+      console.log(line)
+
       const group = d3.select(this)
       const lastPoint = line.values[line.values.length - 1]
-      const labelText = line.id
+      const labelText = line.id + " (" + line.currency + ")"
       const fillColor = line.color
       const textColor = getContrastColor(fillColor)
 
@@ -458,7 +463,7 @@ const MultiLineChart: React.FC = () => {
         .attr("class", `label-rect label-${line.id.replace(/\s+/g, '-')}`)
         .attr("x", labelStartX)
         .attr("y", labelY - (bbox.height+5) / 2)
-        .attr("width", bbox.width + 15)
+        .attr("width", bbox.width + 5)
         .attr("height", bbox.height + 5)
         .attr("fill", fillColor)
         .attr("rx", 3)
@@ -480,11 +485,11 @@ const MultiLineChart: React.FC = () => {
 
     // 1️⃣4️⃣ Marker események (pl. válság, Covid)
     const markers = [
-      { xVal: new Date(2008, 9, 11), label: "Financial crisis", img: Valsag },
-      { xVal: new Date(2021, 2, 21), label: "Covid", img: Covid },
+      { xVal: new Date(2008, 9, 11), label: "Financial crisis", img: Valsag, widthI: 40, heightI: 40 },
+      { xVal: new Date(2021, 2, 21), label: "Covid", img: Covid, widthI: 36, heightI: 36 },
     ]
 
-    markers.forEach(({ xVal, label, img }) => {
+    markers.forEach(({ xVal, label, img, widthI, heightI }) => {
       if (xVal.getTime() < dateRange[0] || xVal.getTime() > dateRange[1]) return // ne rajzold ki ha kívül van a tartományon
 
       const markerX = x(xVal)
@@ -500,10 +505,10 @@ const MultiLineChart: React.FC = () => {
 
       // Kép és szöveg HTML-ként, foreignObject segítségével
       const fo = svg.append("foreignObject")
-        .attr("x", markerX + margin.left - 40)
-        .attr("y", - 20)
-        .attr("width", 80)
-        .attr("height", 80)
+        .attr("x", markerX + margin.left - 45)
+        .attr("y", - 5)
+        .attr("width", 90)
+        .attr("height", 90)
 
       const div = fo.append("xhtml:div")
         .attr("class", "marker-div")
@@ -516,8 +521,8 @@ const MultiLineChart: React.FC = () => {
 
       div.append("img")
         .attr("src", img)
-        .attr("width", 40)
-        .attr("height", 40)
+        .attr("width", widthI)
+        .attr("height", heightI)
         .style("border-radius", "50%")
 
       div.append("span")
@@ -573,6 +578,8 @@ const MultiLineChart: React.FC = () => {
       </div>
 
 
+      
+
       {
         rangeVisible && (
           <div className="mx-12 mb-5 mt-5">
@@ -591,6 +598,8 @@ const MultiLineChart: React.FC = () => {
           </div>
         )
       }
+
+      <h1 className="text-center text-[18px]">Household budgets since 2005</h1>
 
 
       <svg className="mt-12" ref={ref}></svg>

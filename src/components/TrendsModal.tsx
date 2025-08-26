@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import Error from "../images/error.png"
 import Search from "../images/search.png"
 import Reset from "../images/reset.png"
-import { LineSeries } from "./MultiLineChartDemo";
 
 interface TrendsModalProps {
   isOpen: boolean;
@@ -10,6 +9,21 @@ interface TrendsModalProps {
   data: LineSeries[];
   selectedIds: string[]; // jelenleg kiválasztott sorok
   onSelectionChange: (ids: string[]) => void;
+}
+
+interface LineDataPoint {
+  x: number // X koordináta (pl. év, hónap index)
+  y: number // Y érték (pl. pénz, darabszám)
+}
+
+type SocialClass = "lower" | "middle" | "high";
+
+export interface LineSeries {
+  id: string           // vonal neve (pl. "Family A")
+  values: LineDataPoint[] // a vonalhoz tartozó pontok
+  color: string        // a vonal színe
+  currency: string
+  socialClass: SocialClass
 }
 
 const DEFAULT_SELECTION = ["Smith", "Blackwood", "Wilson"];

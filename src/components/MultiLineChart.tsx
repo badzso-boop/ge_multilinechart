@@ -217,8 +217,16 @@ const MultiLineChart: React.FC = () => {
 
     const filteredData = filteredModalData.map(series => ({
       ...series,
-      values: series.values.filter(v => v.x >= dateRange[0] && v.x <= dateRange[1])
+      // values: series.values.filter(v => v.x >= dateRange[0] && v.x <= dateRange[1])
+      values: series.values
     }))
+
+    g.append("defs")
+      .append("clipPath")
+      .attr("id", "clip")
+      .append("rect")
+      .attr("width", width)
+      .attr("height", height);
 
     // 5️⃣ Skálák létrehozása
     const x = d3.scaleTime()
@@ -360,13 +368,16 @@ const MultiLineChart: React.FC = () => {
     lines.append("path")
       .attr("class", "line-hover-area")
       .attr("fill", "none")
-      .attr("stroke", "transparent")
+      // .attr("stroke", "transparent")
+      .attr("opacity", 0.2) 
+      .attr("stroke", "red")
       .attr("stroke-width", hoverWidth)
       .attr("d", (d,i) => lineGenerators[i](d.values) ?? "")
 
     // 🔟 Látható vonal kirajzolása
     lines.append("path")
       .attr("class", "line-path")
+      .attr("clip-path", "url(#clip)")
       .attr("fill", "none")
       .attr("stroke", d => d.color)
       .attr("stroke-width", 2)
@@ -374,7 +385,9 @@ const MultiLineChart: React.FC = () => {
 
     // 1️⃣1️⃣ Adatpontok kirajzolása + tooltip események
     lines.selectAll(".data-point")
-      .data((d, i) => d.values.map(v => ({ ...v, color: d.color, parentId: d.id, lineIndex: i, currency: d.currency })))
+      .data((d, i) => d.values
+                        .filter(v => v.x >= dateRange[0] && v.x <= dateRange[1])
+                        .map(v => ({ ...v, color: d.color, parentId: d.id, lineIndex: i, currency: d.currency })))
       .enter()
       .append("circle")
       .attr("class", d => `data-point point-${d.parentId.replace(/\s+/g, '-')}`)
